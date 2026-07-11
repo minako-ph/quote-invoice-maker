@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<style>
+  :root {
+    --primary: #1a73e8;
+    --danger: #c5221f;
+    --muted: #5f6368;
+    --border: #dadce0;
+    --bg: #f8f9fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Google Sans", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    font-size: 13px; color: #202124; margin: 0; padding: 12px 12px 24px;
+  }
+  h2 { font-size: 14px; margin: 20px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  button {
+    display: block; width: 100%; margin: 6px 0; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 6px; background: #fff;
+    font-size: 13px; cursor: pointer; text-align: left;
+  }
+  button:hover { background: var(--bg); }
+  button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: bold; text-align: center; }
+  button.primary:hover { background: #1765cc; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  input[type=text], select, textarea {
+    width: 100%; padding: 6px; margin: 2px 0 8px; border: 1px solid var(--border);
+    border-radius: 4px; font-size: 13px;
+  }
+  label { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+  label.inline { display: flex; align-items: center; gap: 6px; margin: 8px 0; color: #202124; font-size: 13px; }
+  .usage-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; margin-bottom: 4px; font-size: 12px;
+  }
+  .usage-box .count { font-size: 16px; font-weight: bold; }
+  .usage-box .plan { float: right; font-weight: bold; color: var(--primary); }
+  .upgrade-link { font-size: 12px; margin: 2px 0 0; }
+  #status { margin: 10px 0; padding: 8px 10px; border-radius: 6px; display: none; white-space: pre-wrap; font-size: 12px; }
+  #status.info { display: block; background: #e8f0fe; color: #174ea6; }
+  #status.error { display: block; background: #fce8e6; color: var(--danger); }
+  #status.success { display: block; background: #e6f4ea; color: #137333; }
+  .muted { color: var(--muted); font-size: 11px; }
+  details { margin: 8px 0; }
+  summary { cursor: pointer; font-weight: bold; font-size: 13px; padding: 4px 0; }
+  .help p, .help li { font-size: 12px; color: #3c4043; }
+  .help ul { padding-left: 18px; margin: 4px 0; }
+  .honest { background: #fef7e0; border: 1px solid #f9d67a; border-radius: 6px; padding: 8px; font-size: 11px; margin: 8px 0; }
+  .spinner { display: none; text-align: center; color: var(--muted); font-size: 12px; margin: 8px 0; }
+</style>
+</head>
+<body>
+  <!-- 統一メッセージ（marketing §4） -->
+  <p class="muted">毎月の見積書・請求書を、スプレッドシートから出ずに。</p>
+
+  <!-- 使用量（FR-9: 常時表示。アップグレード導線は常設1箇所＝marketing §8） -->
+  <div class="usage-box" id="usageBox">
+    <span class="plan" id="planLabel">--</span>
+    今月の出力: <span class="count" id="usageCount">-</span> 枚
+    <div class="muted" id="usageDetail"></div>
+    <div class="upgrade-link" id="upgradeArea" style="display:none">
+      <a href="#" id="upgradeLink" target="_blank" rel="noopener">Pro（月¥1,480・税込）にアップグレード</a>
+    </div>
+  </div>
+
+  <div id="status"></div>
+  <div class="spinner" id="spinner">処理中…</div>
+
+  <h2>書類を作る</h2>
+  <div id="onboarding" style="display:none">
+    <button class="primary" onclick="run('createSample')">サンプルで試す（3分でPDFまで）</button>
+  </div>
+  <button onclick="run('createDocument', 'quote')">＋ 新規見積書</button>
+  <button onclick="run('createDocument', 'invoice')">＋ 新規請求書</button>
+  <button id="sampleBtn" onclick="run('createSample')">サンプル書類を作成</button>
+
+  <h2>開いている書類の操作</h2>
+  <button onclick="runRecalc()">プレビュー / 再計算</button>
+  <button onclick="run('convertToInvoice')">見積書 → 請求書に変換</button>
+  <button class="primary" onclick="runExport()">PDF出力・Driveに保存</button>
+  <p class="muted">保存先: マイドライブ「帳票」フォルダ（請求書/見積書別）。ファイル名は「YYYYMMDD_取引先名_税込金額.pdf」。</p>
+
+  <h2>発行者プロファイル</h2>
+  <details id="profileDetails">
+    <summary>プロファイルを設定する</summary>
+    <label>氏名 / 名称（必須）</label>
+    <input type="text" id="pName">
+    <label>住所</label>
+    <input type="text" id="pAddress">
+    <label class="inline"><input type="checkbox" id="pTaxable"> 適格請求書発行事業者（課税）</label>
+    <label>登録番号（T＋13桁。形式チェックのみ行います）</label>
+    <input type="text" id="pRegNum" placeholder="T1234567890123">
+    <label>消費税の端数処理</label>
+    <select id="pRounding">
+      <option value="floor">切捨て（既定）</option>
+      <option value="round">四捨五入</option>
+      <option value="ceil">切上げ</option>
+    </select>
+    <label class="inline"><input type="checkbox" id="pWithholding"> 源泉徴収税額を既定で計算する</label>
+    <label>源泉対象額の基準</label>
+    <select id="pWithholdingBase">
+      <option value="exTax">税抜（消費税を区分記載する場合の取扱い・既定）</option>
+      <option value="inTax">税込（原則）</option>
+    </select>
+    <label>振込先（請求書に差し込み）</label>
+    <textarea id="pBank" rows="2" placeholder="〇〇銀行 〇〇支店 普通 1234567 名義"></textarea>
+    <label>書類番号プレフィックス（任意）</label>
+    <input type="text" id="pPrefix" placeholder="例: ABC">
+    <button class="primary" onclick="saveProfileForm()">プロファイルを保存</button>
+  </details>
+
+  <h2>ライセンス（Pro）</h2>
+  <div id="licenseStatusText" class="muted"></div>
+  <div id="licenseFree">
+    <label>ライセンスキー</label>
+    <input type="text" id="licenseKeyInput" placeholder="購入完了ページに表示されたキー">
+    <button onclick="saveLicense()">キーを登録して解錠</button>
+    <p class="muted">キーを忘れた場合は<a href="#" id="recoverLink" target="_blank" rel="noopener">再表示ページ</a>から。</p>
+  </div>
+  <div id="licensePro" style="display:none">
+    <button onclick="clearLicense()">ライセンスキーを削除する</button>
+  </div>
+
+  <h2>ヘルプ</h2>
+  <details class="help">
+    <summary>使い方（3ステップ）</summary>
+    <ul>
+      <li>① 発行者プロファイルを設定（氏名・登録番号・振込先など）</li>
+      <li>② 「新規見積書 / 請求書」で書類を作成し、明細を入力</li>
+      <li>③ 「PDF出力・Driveに保存」——電帳法の実務に沿ったファイル名で保存され、台帳にも記帳されます</li>
+    </ul>
+  </details>
+  <details class="help">
+    <summary>できないこと（正直な明記）</summary>
+    <div class="honest">
+      ① 登録番号（T番号）の真正性は検証しません（入力欄の形式チェックのみ）。<br>
+      ② 税務助言ではありません（源泉徴収の要否・対象該当性などの判断は、ご自身または税理士にてお願いします）。<br>
+      ③ 電子帳簿保存法の要件充足を保証するものではありません（国税庁の例示に沿ったファイル名と台帳で実務を助ける機能です。検索要件には売上規模等による緩和があります）。
+    </div>
+  </details>
+  <details class="help">
+    <summary>源泉徴収について</summary>
+    <p>源泉徴収税額＝報酬額×10.21%（100万円超部分は20.42%）・1円未満切捨て。計算式と根拠は帳票の注記に必ず表示します。源泉徴収は支払者側の義務であり、請求書への記載は実務慣行としての参考計算です。要否の判断は利用者にてお願いします。</p>
+  </details>
+  <details class="help">
+    <summary>取引先の登録番号をまとめて確認したい</summary>
+    <p>取引先が適格請求書発行事業者かをまとめて確認したいときは、姉妹アドオン『会社リストクリーナー』をご利用ください。本アドオンは登録番号の真正性を検証しません。</p>
+  </details>
+
+<script>
+  // 購入導線・再表示ページのURL。公開作業（人間タスク）で確定後に差し替える。
+  // 空の間はアップグレード導線を「準備中」にする（柱3 thanks.html と同じプレースホルダ運用）。
+  var CHECKOUT_URL = '';
+  var RECOVER_URL = '';
+
+  // 無料枠到達時メッセージ（marketing §8 verbatim。ダークパターン禁止＝回復する事実を隠さない）
+  var QUOTA_MESSAGE = '今月の無料枠（3枚）を使い切りました。Proは月¥1,480（税込）で月1,000枚まで発行できます。無料枠は毎月1日に回復します。';
+
+  function $(id) { return document.getElementById(id); }
+
+  function setStatus(kind, text) {
+    var el = $('status');
+    el.className = kind;
+    el.textContent = text;
+  }
+  function clearStatus() { $('status').className = ''; $('status').textContent = ''; }
+  function busy(on) {
+    $('spinner').style.display = on ? 'block' : 'none';
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) buttons[i].disabled = on;
+  }
+
+  function showError(error) {
+    busy(false);
+    var message = error && error.message ? error.message : String(error);
+    if (message.indexOf('QUOTA_EXCEEDED') !== -1) {
+      setStatus('error', QUOTA_MESSAGE);
+    } else {
+      setStatus('error', message);
+    }
+  }
+
+  function renderUsage(usage) {
+    $('usageCount').textContent = usage.used + ' / ' + usage.limit;
+    $('planLabel').textContent = usage.plan === 'pro' ? 'Pro' : 'Free';
+    $('usageDetail').textContent = usage.month + ' ／ 残り ' + usage.remaining + ' 枚';
+    var isFree = usage.plan !== 'pro';
+    $('upgradeArea').style.display = isFree ? 'block' : 'none';
+    if (isFree) {
+      var link = $('upgradeLink');
+      if (CHECKOUT_URL === '') {
+        link.removeAttribute('href');
+        link.textContent = 'Pro（月¥1,480・税込）— 購入ページ準備中';
+      } else {
+        link.href = CHECKOUT_URL;
+        link.textContent = 'Pro（月¥1,480・税込）にアップグレード';
+      }
+    }
+  }
+
+  function renderLicense(license) {
+    var text = '';
+    if (license.state === 'valid') text = 'Pro有効（月' + license.limit.toLocaleString('ja-JP') + '枚まで）';
+    else if (license.state === 'none') text = '未登録（Free: 月3枚まで・全機能利用可）';
+    else if (license.state === 'invalid') text = 'キーが無効です' + (license.message ? '：' + license.message : '');
+    else text = '検証できません（一時的にFree扱い）' + (license.message ? '：' + license.message : '');
+    $('licenseStatusText').textContent = text;
+    $('licenseFree').style.display = license.state === 'valid' ? 'none' : 'block';
+    $('licensePro').style.display = license.state === 'valid' ? 'block' : 'none';
+    var recover = $('recoverLink');
+    if (RECOVER_URL === '') { recover.removeAttribute('href'); recover.textContent = '再表示ページ（準備中）'; }
+    else recover.href = RECOVER_URL;
+  }
+
+  function renderProfile(profile) {
+    $('pName').value = profile.name || '';
+    $('pAddress').value = profile.address || '';
+    $('pTaxable').checked = profile.taxable !== false;
+    $('pRegNum').value = profile.registrationNumber || '';
+    $('pRounding').value = profile.rounding || 'floor';
+    $('pWithholding').checked = profile.withholdingDefault === true;
+    $('pWithholdingBase').value = profile.withholdingBase || 'exTax';
+    $('pBank').value = profile.bankInfo || '';
+    $('pPrefix').value = profile.docNumberPrefix || '';
+  }
+
+  function init() {
+    busy(true);
+    google.script.run
+      .withSuccessHandler(function (data) {
+        busy(false);
+        renderUsage(data.usage);
+        renderLicense(data.license);
+        renderProfile(data.profile);
+        // 初回起動: プロファイル未設定なら「サンプルで試す」CTAを最上部に1つだけ出す（marketing §8）
+        $('onboarding').style.display = data.profileConfigured ? 'none' : 'block';
+        $('sampleBtn').style.display = data.profileConfigured ? 'block' : 'none';
+        if (!data.profileConfigured) $('profileDetails').open = true;
+      })
+      .withFailureHandler(showError)
+      .getSidebarInit();
+  }
+
+  // 汎用実行（シート作成系）
+  function run(fn, arg) {
+    clearStatus();
+    busy(true);
+    var runner = google.script.run
+      .withSuccessHandler(function (result) {
+        busy(false);
+        if (result && result.sheetName) setStatus('success', 'シート「' + result.sheetName + '」を作成しました');
+      })
+      .withFailureHandler(showError);
+    if (arg === undefined) runner[fn]();
+    else runner[fn](arg);
+  }
+
+  function runRecalc() {
+    clearStatus();
+    busy(true);
+    google.script.run
+      .withSuccessHandler(function (result) {
+        busy(false);
+        var lines = ['再計算しました。税込合計 ¥' + result.total.toLocaleString('ja-JP')];
+        if (result.withholdingTax > 0) {
+          lines.push('源泉徴収税額 ¥' + result.withholdingTax.toLocaleString('ja-JP') +
+            ' ／ 差引請求額 ¥' + result.amountDue.toLocaleString('ja-JP'));
+        }
+        lines.push('');
+        lines.push('計算根拠:');
+        for (var i = 0; i < result.notes.length; i++) lines.push('・' + result.notes[i]);
+        setStatus('info', lines.join('\n'));
+      })
+      .withFailureHandler(showError)
+      .recalculate();
+  }
+
+  function runExport() {
+    clearStatus();
+    busy(true);
+    setStatus('info', 'PDFを生成しています…（30秒程度かかることがあります）');
+    google.script.run
+      .withSuccessHandler(function (result) {
+        busy(false);
+        renderUsage(result.usage);
+        setStatus('success', '保存しました: ' + result.fileName + '\n' + result.fileUrl);
+      })
+      .withFailureHandler(showError)
+      .exportPdf();
+  }
+
+  function saveProfileForm() {
+    clearStatus();
+    busy(true);
+    var profile = {
+      name: $('pName').value,
+      address: $('pAddress').value,
+      taxable: $('pTaxable').checked,
+      registrationNumber: $('pRegNum').value.trim(),
+      rounding: $('pRounding').value,
+      withholdingDefault: $('pWithholding').checked,
+      withholdingBase: $('pWithholdingBase').value,
+      bankInfo: $('pBank').value,
+      docNumberPrefix: $('pPrefix').value.trim()
+    };
+    google.script.run
+      .withSuccessHandler(function (validation) {
+        busy(false);
+        if (validation.ok) {
+          setStatus('success', 'プロファイルを保存しました');
+          $('onboarding').style.display = 'none';
+          $('sampleBtn').style.display = 'block';
+        } else {
+          setStatus('error', validation.errors.join('\n'));
+        }
+      })
+      .withFailureHandler(showError)
+      .saveProfile(profile);
+  }
+
+  function saveLicense() {
+    clearStatus();
+    var key = $('licenseKeyInput').value.trim();
+    if (key === '') { setStatus('error', 'ライセンスキーを入力してください'); return; }
+    busy(true);
+    google.script.run
+      .withSuccessHandler(function (license) {
+        busy(false);
+        renderLicense(license);
+        if (license.state === 'valid') setStatus('success', 'Proを有効化しました');
+        else if (license.message) setStatus('error', license.message);
+        refreshUsage();
+      })
+      .withFailureHandler(showError)
+      .saveLicenseKey(key);
+  }
+
+  function clearLicense() {
+    clearStatus();
+    busy(true);
+    google.script.run
+      .withSuccessHandler(function (license) {
+        busy(false);
+        renderLicense(license);
+        setStatus('info', 'ライセンスキーを削除しました（Freeプランに戻ります）');
+        refreshUsage();
+      })
+      .withFailureHandler(showError)
+      .clearLicenseKey();
+  }
+
+  function refreshUsage() {
+    google.script.run.withSuccessHandler(renderUsage).getUsage();
+  }
+
+  init();
+</script>
+</body>
+</html>

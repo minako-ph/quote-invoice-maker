@@ -1,0 +1,57 @@
+{
+  "_readme": [
+    "golden基準（要件書§6-6 G-1〜G-11）。**自動上書き禁止**（引継書§10・§13 Do）。",
+    "変更は要件書§6-6の改訂を伴う人間のdiffレビューでのみ行うこと。",
+    "withholding: 対象額(円) → 期待税額(円)。consumptionTax: 税抜区分合計×税率% → 方式別期待値。",
+    "composite: calcDocument の入出力（G-9/G-10/G-11）。"
+  ],
+  "withholding": [
+    { "id": "G-1", "base": 50000, "expected": 5105 },
+    { "id": "G-2", "base": 100000, "expected": 10210 },
+    { "id": "G-3", "base": 345678, "expected": 35293, "note": "35,293.7238の切捨て" },
+    { "id": "G-4", "base": 1000000, "expected": 102100 },
+    { "id": "G-5", "base": 1000001, "expected": 102100, "note": "102,100.2042の切捨て" },
+    { "id": "G-6", "base": 1500000, "expected": 204200, "note": "No.2795の設例と一致" }
+  ],
+  "consumptionTax": [
+    {
+      "id": "G-7",
+      "subtotal": 12345,
+      "ratePercent": 10,
+      "expected": { "floor": 1234, "round": 1235, "ceil": 1235 }
+    },
+    {
+      "id": "G-8",
+      "subtotal": 9999,
+      "ratePercent": 8,
+      "expected": { "floor": 799, "round": 800, "ceil": 800 }
+    }
+  ],
+  "composite": [
+    {
+      "id": "G-9",
+      "items": [
+        { "name": "デザイン料", "quantity": 1, "unitPrice": 100000, "taxCategory": "10", "withholding": true }
+      ],
+      "settings": { "rounding": "floor", "withholdingEnabled": true, "withholdingBase": "exTax" },
+      "expected": { "tax10": 10000, "withholdingTax": 10210, "total": 110000, "amountDue": 99790 }
+    },
+    {
+      "id": "G-10",
+      "items": [
+        { "name": "デザイン料", "quantity": 1, "unitPrice": 100000, "taxCategory": "10", "withholding": true }
+      ],
+      "settings": { "rounding": "floor", "withholdingEnabled": true, "withholdingBase": "inTax" },
+      "expected": { "tax10": 10000, "withholdingTax": 11231, "total": 110000, "amountDue": 98769 }
+    },
+    {
+      "id": "G-11",
+      "items": [
+        { "name": "制作費", "quantity": 1, "unitPrice": 12345, "taxCategory": "10", "withholding": false },
+        { "name": "軽減対象品", "quantity": 1, "unitPrice": 9999, "taxCategory": "8", "withholding": false }
+      ],
+      "settings": { "rounding": "floor", "withholdingEnabled": false, "withholdingBase": "exTax" },
+      "expected": { "tax10": 1234, "tax8": 799, "total": 24377 }
+    }
+  ]
+}
