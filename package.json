@@ -1,0 +1,15 @@
+{
+  "name": "quote-invoice-maker",
+  "private": true,
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

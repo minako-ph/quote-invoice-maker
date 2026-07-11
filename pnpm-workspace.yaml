@@ -1,0 +1,9 @@
+# apps-script = GASアドオン本体（esbuild単一バンドル）、backend = ライセンス専用 Cloud Run（Hono+TS）。
+# 柱3（company-list-cleaner b516718）からのコピー移植。packages/*（柱2 subtree）は取り込まない（引継書§2）。
+packages:
+  - "apps-script"
+  - "backend"
+
+# esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
+allowBuilds:
+  esbuild: true

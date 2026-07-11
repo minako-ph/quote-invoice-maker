@@ -1,0 +1,12 @@
+node_modules/
+dist/
+apps-script/dist/
+.clasp.json
+.env
+.env.*
+!.env.example
+backend/.env
+*.log
+.DS_Store
+# ライセンス署名鍵・各種秘密鍵（CR-5: 鍵をリポジトリに含めない）
+*.pem
