@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>見積書・請求書メーカー for Google Sheets — 源泉税計算・インボイス対応</title>
+  <meta name="description" content="見積書から請求書へワンクリック変換。源泉所得税の自動計算、適格請求書の記載要件に沿った消費税計算（端数処理は選択式）、電子帳簿保存法の実務に沿ったファイル名でのPDF保存まで、スプレッドシートの中で完結。無料で月3枚まで。">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="site-title"><a href="index.html" style="text-decoration:none;color:inherit;">見積書・請求書メーカー for Google Sheets</a></p>
+      <nav class="site-nav">
+        <a href="#pricing">料金</a>
+        <a href="#faq">FAQ</a>
+        <a href="license-recover.html">キー再表示</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <h1>毎月の見積書・請求書を、<br>スプレッドシートから出ずに。</h1>
+        <p>
+          ワンクリック変換、根拠が見える税計算、電子帳簿保存法の実務に沿ったファイル名での自動保存まで。
+          フリーランス・個人事業主のための Google Sheets アドオンです。
+        </p>
+        <p>
+          <a class="btn" href="#" onclick="alert('Google Workspace Marketplace への掲載準備中です。公開までお待ちください。');return false;">Marketplace でインストール（準備中）</a>
+        </p>
+        <!-- TODO: 公開時に30秒デモGIFを配置（marketing §6） -->
+      </div>
+    </section>
+
+    <section class="doc">
+      <div class="wrap">
+        <h2>できること</h2>
+        <ul>
+          <li><strong>変換する</strong> — 見積書から請求書へワンクリックで変換（明細・取引先を引継ぎ）</li>
+          <li><strong>計算する</strong> — 源泉所得税（10.21%・100万円超部分は20.42%）と、適格請求書の記載要件に沿った消費税（税率ごとに1回の端数処理・方式は選択式）を自動計算</li>
+          <li><strong>出力する</strong> — A4縦の請求書・見積書PDFを生成（免税事業者向けの区分記載様式にも対応）</li>
+          <li><strong>保存する</strong> — 「YYYYMMDD_取引先名_税込金額.pdf」の実務的なファイル名で Google Drive に自動保存</li>
+          <li><strong>記帳する</strong> — 保存のたびに台帳シートへ自動追記（発行日・取引先・金額・リンク）</li>
+        </ul>
+
+        <h2>3つの特長</h2>
+        <ol>
+          <li><strong>一気通貫</strong> — 変換・計算・PDF・命名保存・台帳記帳が1本の動線でつながります。</li>
+          <li><strong>根拠が見える計算</strong> — 適用税率・端数処理方式・源泉税の計算式を帳票の注記とサイドバーに必ず表示。受け取った側も検算できます。</li>
+          <li><strong>データが外に出ない</strong> — 明細・取引先の情報をあなたのシートとDriveの外へ送信しません（無料利用の範囲では外部送信ゼロ）。</li>
+        </ol>
+
+        <h2>できないこと（正直な明記）</h2>
+        <div class="honest" style="border-radius:8px;padding:16px 20px;">
+          <p>① 登録番号（T番号）の真正性は検証しません（入力欄の形式チェックのみ。取引先の登録状況をまとめて確認したい場合は姉妹アドオン「会社リストクリーナー」）。</p>
+          <p>② 税務助言ではありません（源泉徴収の要否・対象該当性などの判断は、ご自身または税理士にてお願いします）。</p>
+          <p style="margin-bottom:0;">③ 電子帳簿保存法の要件充足を保証するものではありません（国税庁の例示に沿ったファイル名と台帳で実務を助ける機能です。検索要件には売上規模等による緩和があります）。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="doc" id="pricing">
+      <div class="wrap">
+        <h2>料金</h2>
+        <table class="info-table">
+          <tr>
+            <th>Free</th>
+            <td>¥0 — 月3枚まで（PDF出力単位）。全機能利用可＝量の制限のみ。無料枠は毎月1日に回復します。</td>
+          </tr>
+          <tr>
+            <th>Pro</th>
+            <td>¥1,480 / 月（税込）— 月1,000枚までのフェアユース上限。超過は個別相談。解約は Stripe カスタマーポータルからいつでも。</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="doc" id="faq">
+      <div class="wrap">
+        <h2>よくある質問</h2>
+        <h3>Q1. 免税事業者でも使えますか？</h3>
+        <p>はい。プロファイルで「適格請求書発行事業者ではない」を選ぶと、登録番号なしの区分記載様式に切り替わります。</p>
+        <h3>Q2. 源泉徴収税額は正確ですか？</h3>
+        <p>計算式と根拠を必ず表示します（10.21%・100万円超部分は20.42%・1円未満切捨て）。源泉徴収の要否の判断はご自身でお願いします。</p>
+        <h3>Q3. データはどこに保存されますか？</h3>
+        <p>あなたのスプレッドシートと Google Drive のみ。運営側サーバには送信しません。</p>
+        <h3>Q4. 無料で何枚まで？</h3>
+        <p>月3枚まで。毎月自動で回復します。</p>
+        <h3>Q5. 解約方法は？</h3>
+        <p>Stripe カスタマーポータルからいつでも。解約後も当該課金期間の満了までPro機能を利用できます。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav>
+        <a href="index.html">トップ</a>
+        <a href="license-recover.html">キー再表示</a>
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      </nav>
+      <p>&copy; <span class="todo">TODO: 運営者名</span> 見積書・請求書メーカー</p>
+    </div>
+  </footer>
+</body>
+</html>

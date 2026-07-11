@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プライバシーポリシー — 見積書・請求書メーカー for Google Sheets</title>
+  <meta name="description" content="見積書・請求書メーカーのプライバシーポリシー。データ最小化（シート内容を外部送信しない）・OAuthスコープ・決済情報の取扱いについて。">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="site-title"><a href="index.html" style="text-decoration:none;color:inherit;">見積書・請求書メーカー for Google Sheets</a></p>
+      <nav class="site-nav">
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特商法表記</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="doc">
+    <div class="wrap">
+      <h1>プライバシーポリシー</h1>
+      <p class="updated">最終更新日: <span class="todo">TODO: 公開日</span></p>
+
+      <p>
+        本ポリシーは、Google スプレッドシート用アドオン「見積書・請求書メーカー」（以下「本サービス」）における
+        利用者情報の取扱いを定めます。本サービスは、スプレッドシート上で見積書・請求書の作成・税計算・PDF出力・Drive保存を行うツールです。
+      </p>
+
+      <h2>1. シートの内容を外部に送信しません（データ最小化）</h2>
+      <p>
+        本サービスは、お客様のスプレッドシートの内容（明細・取引先名・金額等）を
+        <strong>運営側サーバへ送信しません</strong>。書類データの処理はすべて、お客様の Google アカウント内
+        （スプレッドシートと Google Drive）で完結します。
+      </p>
+      <p>
+        外部への通信は次の2つに限られます:
+      </p>
+      <ul>
+        <li><strong>ライセンスキーの検証</strong> — 有料プラン利用時に、ライセンスキー文字列のみを運営バックエンドへ送信します。</li>
+        <li><strong>Stripe 決済ページへの遷移</strong> — 有料プランのお申し込み時にStripeの決済ページを開きます。</li>
+      </ul>
+      <p><strong>無料利用の範囲では、シート外へのデータ送信はゼロです。</strong></p>
+
+      <h2>2. 運営側でデータを保存しない設計</h2>
+      <p>
+        運営バックエンドはライセンスの発行・検証のみを行う<strong>ステートレス</strong>な構成で、
+        お客様の書類データはもちろん、利用量データもサーバに保存しません
+        （無料枠のカウントはお客様の Google アカウント内のプロパティ領域で管理されます）。
+      </p>
+
+      <h2>3. OAuthで取得する権限（スコープ）と用途</h2>
+      <p>本サービスが Google に要求する権限は、以下の4点のみです。これ以外の権限（Gmail・Drive全体へのアクセス等）は要求しません。</p>
+      <table class="info-table">
+        <tr>
+          <th>現在のスプレッドシートの参照・編集<br>(spreadsheets.currentonly)</th>
+          <td>お客様が開いているスプレッドシートに入力シート・帳票・台帳を作成し読み書きするため。他のスプレッドシートにはアクセスしません。</td>
+        </tr>
+        <tr>
+          <th>外部サービスへの接続<br>(script.external_request)</th>
+          <td>PDF生成（Google のエクスポートAPI）とライセンス検証（送信先を固定）のため。</td>
+        </tr>
+        <tr>
+          <th>サイドバー等のUI表示<br>(script.container.ui)</th>
+          <td>操作用のサイドバーUIを表示するため。</td>
+        </tr>
+        <tr>
+          <th>本アドオンが作成したDriveファイルへのアクセス<br>(drive.file)</th>
+          <td>生成したPDFを保存するフォルダ（「帳票」）の作成と、PDFファイルの保存のため。<strong>本アドオンが作成したファイル・フォルダ以外にはアクセスできない権限です。</strong></td>
+        </tr>
+      </table>
+
+      <h2>4. 決済情報（Stripe）の取扱い</h2>
+      <p>
+        有料プランの決済は Stripe を利用します。クレジットカード番号等の決済情報は Stripe が管理し、
+        <strong>運営側でカード情報を保持・保存することはありません</strong>。運営側が Stripe から受け取るのは、
+        ライセンスキーと購読状態を紐付けるための識別子（顧客ID等）に限られます。
+      </p>
+
+      <h2>5. 第三者提供</h2>
+      <p>
+        法令に基づく場合を除き、お客様の情報を第三者に提供しません。決済事業者（Stripe）への必要な通信は、
+        本サービスの提供に不可欠な範囲で行います。
+      </p>
+
+      <h2>6. お問い合わせ先</h2>
+      <p><span class="todo">TODO: 問い合わせ先メールアドレス／フォームURL</span></p>
+
+      <h2>7. 改定</h2>
+      <p>本ポリシーは必要に応じて改定することがあります。重要な変更がある場合は本ページで告知します。</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav>
+        <a href="index.html">トップ</a>
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      </nav>
+      <p>&copy; <span class="todo">TODO: 運営者名</span> 見積書・請求書メーカー</p>
+    </div>
+  </footer>
+</body>
+</html>
