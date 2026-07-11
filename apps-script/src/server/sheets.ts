@@ -232,7 +232,8 @@ export function readDocument(sheet: GoogleAppsScript.Spreadsheet.Sheet): Documen
     .getRange(ITEMS.startRow, 1, ITEMS.rowCount, ITEMS.headers.length)
     .getValues();
   const items: LineItemInput[] = [];
-  for (const row of itemsRange) {
+  for (let i = 0; i < itemsRange.length; i++) {
+    const row = itemsRange[i] ?? [];
     const name = String(row[ITEMS.col.name - 1] ?? '').trim();
     const quantityRaw = row[ITEMS.col.quantity - 1];
     const unitPriceRaw = row[ITEMS.col.unitPrice - 1];
@@ -240,7 +241,11 @@ export function readDocument(sheet: GoogleAppsScript.Spreadsheet.Sheet): Documen
     const unitPrice = typeof unitPriceRaw === 'number' ? unitPriceRaw : Number(unitPriceRaw) || 0;
     if (name === '' && quantity === 0 && unitPrice === 0) continue;
     const taxLabel = String(row[ITEMS.col.taxCategory - 1] ?? '').trim();
-    const category: TaxCategory = TAX_CATEGORY_BY_LABEL[taxLabel] ?? '10';
+    const category: TaxCategory | undefined = TAX_CATEGORY_BY_LABEL[taxLabel];
+    if (category === undefined) {
+      // F-7: 空欄・プルダウン外の値を黙って10%にしない（根拠のない既定を作らない）
+      throw new Error(`明細${i + 1}行目の税率を選択してください（10% / 8%（軽減）/ 対象外）`);
+    }
     items.push({
       name,
       quantity,

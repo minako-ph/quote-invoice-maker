@@ -90,7 +90,7 @@
     <input type="text" id="pName">
     <label>住所</label>
     <input type="text" id="pAddress">
-    <label class="inline"><input type="checkbox" id="pTaxable"> 適格請求書発行事業者（課税）</label>
+    <label class="inline"><input type="checkbox" id="pTaxable"> 適格請求書発行事業者（登録番号あり）</label>
     <label>登録番号（T＋13桁。形式チェックのみ行います）</label>
     <input type="text" id="pRegNum" placeholder="T1234567890123">
     <label>消費税の端数処理</label>
@@ -155,6 +155,8 @@
   // 空の間はアップグレード導線を「準備中」にする（柱3 thanks.html と同じプレースホルダ運用）。
   var CHECKOUT_URL = '';
   var RECOVER_URL = '';
+  // F-6: Marketplace掲載URL（レビュー依頼用）。公開後に人間が差替。空の間は何も表示しない。
+  var REVIEW_URL = '';
 
   // 無料枠到達時メッセージ（marketing §8 verbatim。ダークパターン禁止＝回復する事実を隠さない）
   var QUOTA_MESSAGE = '今月の無料枠（3枚）を使い切りました。Proは月¥1,480（税込）で月1,000枚まで発行できます。無料枠は毎月1日に回復します。';
@@ -287,6 +289,19 @@
         busy(false);
         renderUsage(result.usage);
         setStatus('success', '保存しました: ' + result.fileName + '\n' + result.fileUrl);
+        // F-6: 初回のPDF保存成功直後に1回だけ・URL設定済みのときのみ表示（再表示しない=marketing §8）
+        if (result.showReviewPrompt && REVIEW_URL !== '') {
+          var statusEl = $('status');
+          var p = document.createElement('p');
+          p.style.marginTop = '8px';
+          var a = document.createElement('a');
+          a.href = REVIEW_URL;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = '役に立ったらストアでレビューをお願いします';
+          p.appendChild(a);
+          statusEl.appendChild(p);
+        }
       })
       .withFailureHandler(showError)
       .exportPdf();

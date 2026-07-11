@@ -115,6 +115,21 @@ export interface ExportResult {
   readonly fileName: string;
   readonly fileUrl: string;
   readonly usage: UsageInfo;
+  /** F-6: 初回のPDF保存成功直後に1回だけ true（サイドバーがレビュー依頼を表示。marketing §8）。 */
+  readonly showReviewPrompt: boolean;
+}
+
+const REVIEW_PROMPT_PROP = 'reviewPromptShown';
+
+/**
+ * 初回export成功のフラグを消費する（F-6）。初回のみ true を返し、以後は false。
+ * 再表示はしない（marketing §8: 1回だけ・再表示/報酬付き依頼は禁止）。
+ */
+function consumeReviewPromptFlag(): boolean {
+  const props = PropertiesService.getUserProperties();
+  if (props.getProperty(REVIEW_PROMPT_PROP) !== null) return false;
+  props.setProperty(REVIEW_PROMPT_PROP, '1');
+  return true;
 }
 
 /**
@@ -131,6 +146,17 @@ export function exportActiveToPdf(): ExportResult {
     throw new Error('明細が1行もありません。品目・数量・単価を入力してから出力してください。');
   }
   const profile = loadProfile();
+  // F-5: 記載事項①（発行者の氏名/名称・適格は登録番号も）を欠いた帳票を構造的に出さない
+  if (profile.name === '') {
+    throw new Error(
+      '発行者プロファイル（氏名/名称）を設定してください（サイドバー「発行者プロファイル」から）',
+    );
+  }
+  if (profile.taxable && profile.registrationNumber === '') {
+    throw new Error(
+      '適格請求書発行事業者の場合は登録番号（T＋13桁）が必要です。未登録・免税事業者の方はチェックを外してください（区分記載請求書の様式で出力します）',
+    );
+  }
   const result = calcDocument(doc.items, settingsOf(doc, profile));
   writeSummary(sheet, result);
   const rendered = renderTemplate(doc, result, profile);
@@ -155,7 +181,12 @@ export function exportActiveToPdf(): ExportResult {
     fileUrl: saved.url,
   });
 
-  return { fileName: saved.fileName, fileUrl: saved.url, usage: usageInfo(license) };
+  return {
+    fileName: saved.fileName,
+    fileUrl: saved.url,
+    usage: usageInfo(license),
+    showReviewPrompt: consumeReviewPromptFlag(),
+  };
 }
 
 /** プロファイル取得（FR-11）。 */

@@ -56,10 +56,17 @@ export interface ProfileValidation {
 
 /**
  * プロファイルを検証する（純関数）。
- * 登録番号: 課税区分かつ入力ありの場合に形式チェックのみ行う（CR-1。真正性は検証しない）。
+ * 登録番号: 形式チェックのみ行う（CR-1。真正性は検証しない）。
+ * F-5: 課税（適格）を選んだ場合は登録番号必須——§6-3①（氏名/名称**及び登録番号**）を
+ * 満たさない「登録番号のない適格様式風」の帳票を構造的に出さないため。
  */
 export function validateProfile(profile: IssuerProfile): ProfileValidation {
   const errors: string[] = [];
+  if (profile.taxable && profile.registrationNumber === '') {
+    errors.push(
+      '適格請求書発行事業者の場合は登録番号（T＋13桁）が必要です。未登録・免税事業者の方はチェックを外してください（区分記載請求書の様式で出力します）',
+    );
+  }
   if (profile.taxable && profile.registrationNumber !== '') {
     if (!REGISTRATION_NUMBER_PATTERN.test(profile.registrationNumber)) {
       errors.push('登録番号は「T＋数字13桁」の形式で入力してください（例: T1234567890123）');

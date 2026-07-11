@@ -1,5 +1,8 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-11 F-5: 適格（taxable=true）は登録番号必須に強化（validateProfile＋export時ガード＋プロファイル未設定時のexport拒否）。§6-3①を構造で担保。ユーザーゼロのため後方互換考慮なし
+- 2026-07-11 F-6: レビュー依頼の骨組みを実装（初回export成功時に1回だけ・UserProperties reviewPromptShownで管理・REVIEW_URL=''プレースホルダで空の間は非表示。URL差替は公開後の人間タスク）
+- 2026-07-11 F-7: 明細行の税率セルが解釈不能（空欄・プルダウン外）なら『明細N行目の税率を選択してください』エラー（黙って10%既定にしない=根拠のない既定の排除）
 - 2026-07-11 F-2: export実行部をexportRenderedPdfヘルパに集約し「_帳票をexport中のみshowSheet→finally hideSheet」に（非表示gidのexport挙動差を構造的に回避。一瞬タブが見える副作用は許容）。exportPdfProbeも本番同型フロー（固定ダミー書類→renderTemplate→同ヘルパ）に変更しV-1の検証対象を4スコープトークンのexport URL認可に純化
 - 2026-07-11 F-3: Drive Files.getのfieldsを明示（id,mimeType,trashed）。v3既定fieldsにtrashedが無く、ゴミ箱入り「帳票」フォルダを生存と誤判定して以後のPDFがゴミ箱内へ保存され続けるバグを修正
 - 2026-07-11 F-4: fetchPdfBlobに%PDFマジックバイト検査を追加（HTTP 200で非PDFが返るエッジの無言劣化ガード=N-4）

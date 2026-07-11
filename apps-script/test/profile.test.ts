@@ -26,8 +26,14 @@ describe('profile（FR-11）', () => {
     expect(good.ok).toBe(true);
   });
 
-  it('課税＋未入力は許容（登録番号の入力は任意）', () => {
-    expect(validateProfile({ ...DEFAULT_PROFILE, taxable: true, registrationNumber: '' }).ok).toBe(true);
+  it('課税（適格）＋登録番号空はエラー（F-5: 登録番号のない適格様式風の帳票を出さない）', () => {
+    const result = validateProfile({ ...DEFAULT_PROFILE, taxable: true, registrationNumber: '' });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes('チェックを外してください'))).toBe(true);
+  });
+
+  it('免税＋登録番号空はOK（区分記載様式）', () => {
+    expect(validateProfile({ ...DEFAULT_PROFILE, taxable: false, registrationNumber: '' }).ok).toBe(true);
   });
 
   it('免税モードで登録番号を設定するとエラー（区分記載に登録番号様の番号を載せない）', () => {
