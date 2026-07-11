@@ -51,7 +51,10 @@ function readFolderIds(): FolderIds | null {
 /** フォルダが生存しているか（削除・ゴミ箱行きは false）。 */
 function folderAlive(folderId: string): boolean {
   try {
-    const file = Drive.Files.get(folderId);
+    // F-3: v3のFiles.getは既定fieldsにtrashedを含まないため明示する
+    // （省略するとtrashedがundefinedになり、ゴミ箱入りフォルダを生存と誤判定して
+    //   以後のPDFがゴミ箱内へ保存され続ける）。
+    const file = Drive.Files.get(folderId, { fields: 'id, mimeType, trashed' });
     return file.trashed !== true && file.mimeType === FOLDER_MIME;
   } catch {
     return false;

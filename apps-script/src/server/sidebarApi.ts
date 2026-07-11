@@ -11,7 +11,7 @@ import { savePdfToDrive } from './drive';
 import { appendLedgerRow } from './ledger';
 import { effectiveLimit, licenseStatus, removeLicenseKey, storeLicenseKey, type LicenseStatus } from './license';
 import { buildPdfFileName } from './naming';
-import { fetchPdfBlob } from './pdf';
+import { exportRenderedPdf } from './pdf';
 import { isProfileConfigured, loadProfile, storeProfile, type IssuerProfile, type ProfileValidation } from './profile';
 import { FREE_MONTHLY_LIMIT, consumeQuota, readUsage, remainingOf, type Usage } from './quota';
 import { renderTemplate } from './template';
@@ -136,13 +136,13 @@ export function exportActiveToPdf(): ExportResult {
   const rendered = renderTemplate(doc, result, profile);
   SpreadsheetApp.flush();
 
-  const spreadsheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
   const fileName = buildPdfFileName(doc.issueDate, doc.clientName, result.total);
   const license = licenseStatus();
   const limit = effectiveLimit();
 
   const saved = consumeQuota(limit, () => {
-    const blob = fetchPdfBlob(spreadsheetId, rendered.sheetId, rendered.range, fileName);
+    // F-2: 非表示の_帳票を export の間だけ再表示する共通ヘルパ経由（本番・スパイク同型）
+    const blob = exportRenderedPdf(rendered, fileName);
     return savePdfToDrive(blob, fileName, doc.type);
   });
 
