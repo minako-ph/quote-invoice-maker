@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-11 F-1: CORSは/license/claim・/license/recoverの2ルートのみ許可（origin '*'・credentialsなし。認可の実体はsessionId/email＋IPクールダウンでありCORSは境界ではない）。verify=GASサーバ間・webhook=Stripeサーバのため付けない。未設定時503分岐より前にuse登録
 - 2026-07-11 GitHub Pages を有効化（build_type=workflow・gh api）。暫定URL https://minako-ph.github.io/quote-invoice-maker/ 。カスタムドメイン（サブドメインCNAME）はドメイン確定後（domain-pages.md）
 - 2026-07-11 web/thanks・license-recover は柱3の型を移植（`BACKEND_URL=''`プレースホルダ＋未設定時「準備中」表示）。BACKEND_URL・購入URL（sidebar.html `CHECKOUT_URL`/`RECOVER_URL`）はデプロイ後に人間が差替（TODO）
 - 2026-07-11 backend dist起動スモーク合格: `pnpm --filter backend build` → `node dist/index.js` 起動・`GET /health`={ok:true}・未設定時`/license/verify`=503 を確認（柱3のERR_UNKNOWN_FILE_EXTENSION事故の再発なし）

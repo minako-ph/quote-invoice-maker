@@ -1,4 +1,5 @@
 import type { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { loadConfig } from '../config.js';
 import { registerLicenseRoutes } from './license.js';
 import { registerStripeWebhookRoute } from './stripeWebhook.js';
@@ -17,6 +18,14 @@ export function registerRoutes(app: Hono): void {
 
   // /health は最小応答（引継書§7③）。Cloud Run の5xxアラート・死活監視用。
   app.get('/health', (c) => c.json({ ok: true }));
+
+  // F-1: thanks.html / license-recover.html は GitHub Pages（別オリジン）からブラウザ fetch する
+  // ため、claim / recover の2ルートのみ CORS を許可する（origin '*'・credentials なし。
+  // 認可の実体は sessionId／email＋IPクールダウンであり、CORS は境界ではない）。
+  // /license/verify は GAS サーバ間通信・/stripe/webhook は Stripe サーバからのため付けない。
+  // 未設定時503の early return 側にも効くよう、分岐より前に登録する。
+  app.use('/license/claim', cors());
+  app.use('/license/recover', cors());
 
   // ライセンス（FR-10）。Stripe/署名鍵が未設定なら license サービスは生成しない
   // （ルートは配線しつつ 503 で明示する＝無言で失敗しない）。

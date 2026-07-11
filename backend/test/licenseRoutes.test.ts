@@ -230,3 +230,51 @@ describe('POST /stripe/webhook（署名検証）', () => {
     expect(res.status).toBe(503);
   });
 });
+
+describe('CORS（F-1: claim/recover のみ・thanks/license-recover のブラウザfetch用）', () => {
+  // 実配線（routes/index.ts）を検証するため createApp を使う。
+  // Stripe未設定でも cors の use 登録は分岐より前のため効くこと（503にもACAOが付く）を確認する。
+
+  it('OPTIONS /license/claim はプリフライト成功（204＋Access-Control-Allow-Origin）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await app.request('/license/claim', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://example.github.io',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('OPTIONS /license/recover もプリフライト成功', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await app.request('/license/recover', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://example.github.io',
+        'access-control-request-method': 'POST',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('POST /license/claim の応答に Access-Control-Allow-Origin が付く（未設定時503でも）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await post(app, '/license/claim', { sessionId: 'sess_1' }, { origin: 'https://example.github.io' });
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('POST /license/verify には CORS ヘッダを付けない（GASサーバ間通信のみ）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await post(app, '/license/verify', { licenseKey: 'x' }, { origin: 'https://example.github.io' });
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});
