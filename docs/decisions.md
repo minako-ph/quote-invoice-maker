@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-11 GitHub Pages を有効化（build_type=workflow・gh api）。暫定URL https://minako-ph.github.io/quote-invoice-maker/ 。カスタムドメイン（サブドメインCNAME）はドメイン確定後（domain-pages.md）
 - 2026-07-11 web/thanks・license-recover は柱3の型を移植（`BACKEND_URL=''`プレースホルダ＋未設定時「準備中」表示）。BACKEND_URL・購入URL（sidebar.html `CHECKOUT_URL`/`RECOVER_URL`）はデプロイ後に人間が差替（TODO）
 - 2026-07-11 backend dist起動スモーク合格: `pnpm --filter backend build` → `node dist/index.js` 起動・`GET /health`={ok:true}・未設定時`/license/verify`=503 を確認（柱3のERR_UNKNOWN_FILE_EXTENSION事故の再発なし）
 - 2026-07-11 backend は柱3 `company-list-cleaner` コミット `b51671894689c8eb6c493603c2099ffea4ebf09c` からのコピー移植（本リポジトリで改変自由・柱3側は不介入）。iss=`quote-invoice-maker`／aud=`quote-invoice-maker-license` の別鍵分離、Firestore/quota/公的API/監視系は構成ごと削除、env は STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET/LICENSE_SIGNING_KEY/PORT の4点のみ
