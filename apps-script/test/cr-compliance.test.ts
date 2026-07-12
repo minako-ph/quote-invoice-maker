@@ -14,10 +14,10 @@ import { FREE_MONTHLY_LIMIT, PRO_MONTHLY_LIMIT } from '../src/server/quota';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-/** 走査対象ディレクトリ（ソース・UI・web）。 */
-const SCAN_DIRS = ['apps-script/src', 'backend/src', 'web', 'scripts'];
+/** 走査対象ディレクトリ（ソース・UI・web・審査提出物）。 */
+const SCAN_DIRS = ['apps-script/src', 'backend/src', 'web', 'scripts', 'docs/submission'];
 /** 走査対象拡張子。 */
-const SCAN_EXTS = ['.ts', '.js', '.mjs', '.html', '.css', '.json'];
+const SCAN_EXTS = ['.ts', '.js', '.mjs', '.html', '.css', '.json', '.md'];
 
 /** CR-1 禁止パターン: 国税庁インボイス公表システム関連の照会実装の痕跡。 */
 const FORBIDDEN_PATTERNS: readonly { readonly pattern: RegExp; readonly reason: string }[] = [
@@ -28,11 +28,12 @@ const FORBIDDEN_PATTERNS: readonly { readonly pattern: RegExp; readonly reason: 
   { pattern: /registrationNumber(Lookup|Verify|Check)/i, reason: '登録番号照会APIの実装（CR-1）' },
 ];
 
-/** CR-1 の許容: 「検証しません」等の否定文・注意書きは許す。 */
+/** CR-1 の許容: 「検証しません」「行わない」等の否定文・注意書きは許す。 */
 const ALLOWED_CONTEXTS: readonly RegExp[] = [
   /検証(しません|しない|を行わない|コードを書かない)/,
   /真正性(は|を)?検証/, // 「真正性は検証しません」の断り書き
   /照会(しません|しない|エンドポイント・照会クライアント)/,
+  /(照会|検証)[^。]{0,20}を?行(わない|いません)/, // 「照会・真正性検証を行わない」等の否定文
 ];
 
 function listFiles(dir: string): string[] {
