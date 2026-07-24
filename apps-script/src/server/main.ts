@@ -20,7 +20,7 @@ import {
   type SidebarInit,
   type UsageInfo,
 } from './sidebarApi';
-import { probeDrive, probeExportPdf } from './spike';
+import { probeDrive, probeExportPdf, probeExportPdfFallback1 } from './spike';
 import type { LicenseStatus } from './license';
 import type { IssuerProfile, ProfileValidation } from './profile';
 
@@ -36,6 +36,7 @@ export function onOpen(): void {
     .addItem('サイドバーを開く', 'showSidebar')
     .addSeparator()
     .addItem('(dev) V-1スパイク', 'devRunExportPdfProbe')
+    .addItem('(dev) V-1フォールバック(1)スパイク', 'devRunExportPdfFallback1')
     .addItem('(dev) V-2スパイク', 'devRunDriveProbe')
     .addToUi();
 }
@@ -112,12 +113,20 @@ export function devRunExportPdfProbe(): void {
   SpreadsheetApp.getUi().alert(probeExportPdf());
 }
 
+export function devRunExportPdfFallback1(): void {
+  SpreadsheetApp.getUi().alert(probeExportPdfFallback1());
+}
+
 export function devRunDriveProbe(): void {
   SpreadsheetApp.getUi().alert(probeDrive());
 }
 
 export function exportPdfProbe(): string {
   return probeExportPdf();
+}
+
+export function exportPdfFallback1Probe(): string {
+  return probeExportPdfFallback1();
 }
 
 export function driveProbe(): string {

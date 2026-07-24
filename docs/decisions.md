@@ -1,5 +1,8 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 【実測】V-2成立: Drive v3 Advanced Service（drive.file）でフォルダ作成・PDFアップロード・取得確認（trashed含むfields取得）すべてOK（エディタ実行）→ FR-8はAdvanced Drive方式で確定
+- 2026-07-24 【実測】V-1一次案は不成立: コンテナ自身のexport URLがHTTP 404（テストシート・アドオンメニュー実行）。**ブラウザで同一URLを開くとPDF取得成功**のため、4スコープ構成のOAuthトークンの認可起因と判定 → 決定木フォールバック(1)の検証へ
+- 2026-07-24 V-1決定木(1)の検証probeを追加: probeExportPdfFallback1()（(dev)メニュー「V-1フォールバック(1)スパイク」）で①drive.fileで新規スプレッドシート作成→②SpreadsheetApp.openById→③export URL→④Drive REST exportを1回で検証。④のためurlFetchWhitelistに https://www.googleapis.com/ を追加（**スコープ変更ではない**・oauthScopes4点は不変）。②成立なら帳票描画をアプリ作成ファイル側で行う設計でレイアウトコード無変更のまま解決、②不成立なら停止して人間判断（決定木(2)）
 - 2026-07-24 V-1スパイクの実行コンテキスト修正: standaloneエディタ実行ではgetActiveSpreadsheet()がnullで本番フローに入れないため、アドオンメニューに「(dev) V-1/V-2スパイク」を追加しalertで結果全文表示（ENTRY_POINTSにdevRun*2点追加）。**TODO: スパイク成立後に(dev)メニュー2項目とdevRun*ハンドラを削除する**（公開版に載せない）
 - 2026-07-24 公開リポジトリのため過去2行の氏名表記を屋号へ編集（gitコミット履歴には残存・許容）
 - 2026-07-24 運営者表記を屋号pelmoalabsへ統一（web/全6ページ©・特商法・PP。コード無変更）: 氏名は特定商取引法の請求開示方式（消費者庁 通信販売広告Q&A A15。氏名（名称）・住所・電話番号は請求があれば遅滞なく開示することで表示省略可）により非表示化。**開示請求受領時はメール（chanmina143@gmail.com）で遅滞なく氏名を開示する運用義務が残る**。価格・支払方法・解約条件など取引条件の記載は省略せず現状維持

@@ -35,8 +35,10 @@ const ENTRY_POINTS = [
   'createSample',
   // V-1/V-2 スパイク（§12-3。devRun*はテストシートのアドオンメニューから・素のprobeはエディタから）
   'devRunExportPdfProbe',
+  'devRunExportPdfFallback1',
   'devRunDriveProbe',
   'exportPdfProbe',
+  'exportPdfFallback1Probe',
   'driveProbe',
 ];
 
