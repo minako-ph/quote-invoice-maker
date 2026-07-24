@@ -1,5 +1,13 @@
 # V-1/V-2 スパイク実行手順（引継書§12-3。人間・テストシートで約10分）
 
+> **確定サマリ（2026-07-24）**: V-1/V-2 とも実測で確定済み。
+> - **V-2 成立**: Drive v3 Advanced Service（drive.file）でフォルダ作成・PDFアップロード・trashed取得OK → FR-8確定。
+> - **V-1 一次案は不成立**（コンテナのexport URL=HTTP 404。ブラウザ同一URLは成功＝トークン認可起因）。
+>   フォールバック(1)実測 ①○②×③○④○ → probe⑤で Sheets Advanced Service 書込＋export 成立。
+>   **採用方式: アプリ作成の帳票作業ファイル（scratch.ts）に Sheets v4 batchUpdate で描画 → export URL**。
+>   本実装は接続済み（pdf.ts exportDocumentPdf）。以下の手順は経緯の記録として残す。
+>   残る実機確認は「サイドバーから実書類でPDF出力→A4目視→§9-5受入E2E」（docs/setup/e2e-acceptance.md）。
+
 未検証事項 V-1（export URL の4スコープ認可）・V-2（Advanced Drive Service の drive.file 実挙動）を
 実機で確定する手順。**結果は必ず docs/decisions.md に1行ずつ記録する**（要件書§9-7 受入基準）。
 

@@ -1,15 +1,17 @@
 /**
- * PDF生成（FR-7・V-1。引継書§6「一次案」）。
+ * PDF生成（FR-7・V-1確定構成。decisions.md 2026-07-24）。
  *
- * 一次案: UrlFetchApp で Sheets export URL＋`Authorization: Bearer ScriptApp.getOAuthToken()`。
- * **V-1 未検証**: 4スコープ構成のトークンでこのエンドポイントが認可されるかは
- * spike.ts exportPdfProbe() の実機実行（人間）で確定してから本接続する（引継書§8・§12-3）。
- * 不成立時のフォールバック順は引継書§6（(1) drive.fileで新規作成したスプレッドシートへ複製→export、
- * (2) 停止して人間判断）。**スコープ追加や別方式への黙った切替はしない（CR-3）。**
+ * V-1実測: 一次案（コンテナ自身のexport URL）はHTTP 404で不成立。フォールバック(1)＝
+ * **アプリ（drive.file）が作成した作業スプレッドシートに Sheets Advanced Service で帳票を描画し、
+ * そのファイルの export URL を UrlFetchApp＋OAuthトークンで取得**する方式で確定
+ * （FB(1)実測 ①○②×③○④○・probe⑤ ②③成立）。スコープは4点のまま（CR-3）。
  */
 
-import { TEMPLATE_SHEET_NAME } from './layout';
-import type { TemplateRenderResult } from './template';
+import { ensureScratchSpreadsheet, SCRATCH_SHEET_ID } from './scratch';
+import { buildTemplateRequests } from './template';
+import type { CalcResult } from './calc';
+import type { IssuerProfile } from './profile';
+import type { DocumentData } from './sheets';
 
 /** export URL を組み立てる（V-1一次案。パラメータの実挙動はスパイクで確認）。 */
 export function buildExportUrl(spreadsheetId: string, gid: number, range: string): string {
@@ -66,25 +68,25 @@ export function fetchPdfBlob(spreadsheetId: string, gid: number, range: string, 
 }
 
 /**
- * 描画済みの帳票（_帳票）をPDF化する共通ヘルパ（F-2。本実装・V-1スパイクの両方が使う）。
+ * 帳票の描画〜PDF取得の一気通貫（V-1確定経路。本実装・V-1スパイクの両方が使う）:
+ * 作業ファイル確保（scratch.ts）→ Sheets Advanced Service batchUpdate で描画 →
+ * export URL からPDF Blob取得（%PDF検査つき）。
  *
- * 非表示シートの gid export は挙動が異なり得るため、export の間だけ
- * `showSheet()` → `flush()` → fetch → finally で `hideSheet()` する
- * （同一方式内の堅牢化であり CR-3 の方式・スコープ変更ではない。
- * 一瞬タブが見える副作用は許容＝decisions.md）。
+ * 単一スクラッチファイルの競合防止のため、呼び出し側は LockService（ユーザーロック）内で
+ * 実行すること（本実装は quota.consumeQuota 内から呼ばれる）。
  */
-export function exportRenderedPdf(rendered: TemplateRenderResult, fileName: string): GoogleAppsScript.Base.Blob {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(TEMPLATE_SHEET_NAME);
-  if (sheet === null) {
-    throw new Error('帳票シート（_帳票）が見つかりません。「プレビュー/再計算」を実行してから出力してください');
+export function exportDocumentPdf(
+  doc: DocumentData,
+  result: CalcResult,
+  profile: IssuerProfile,
+  fileName: string,
+): GoogleAppsScript.Base.Blob {
+  const { requests, range } = buildTemplateRequests(doc, result, profile, SCRATCH_SHEET_ID);
+  const scratchId = ensureScratchSpreadsheet();
+  const spreadsheets = Sheets.Spreadsheets;
+  if (spreadsheets === undefined) {
+    throw new Error('Sheets Advanced Service が利用できません（appsscript.json の enabledAdvancedServices を確認）');
   }
-  sheet.showSheet();
-  SpreadsheetApp.flush();
-  try {
-    return fetchPdfBlob(ss.getId(), rendered.sheetId, rendered.range, fileName);
-  } finally {
-    sheet.hideSheet();
-    SpreadsheetApp.flush();
-  }
+  spreadsheets.batchUpdate({ requests: [...requests] }, scratchId);
+  return fetchPdfBlob(scratchId, SCRATCH_SHEET_ID, range, fileName);
 }

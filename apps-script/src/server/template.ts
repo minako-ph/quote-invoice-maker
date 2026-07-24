@@ -1,26 +1,40 @@
 /**
- * 帳票シート「_帳票」への差し込み（FR-5/FR-6。引継書§6）。
+ * 帳票の差し込みリクエスト生成（FR-5/FR-6。V-1確定構成＝decisions.md 2026-07-24）。
  *
- * 非表示の帳票シート1枚を使い回し、PDF出力の都度、入力シートの内容＋計算結果＋
- * 発行者プロファイルを差し込む。
+ * V-1実測により、帳票はコンテナ内シートではなく**アプリ作成の作業スプレッドシート
+ * （scratch.ts）に Sheets Advanced Service（v4 batchUpdate）で描画**する。
+ * 本モジュールはその batchUpdate リクエスト列を組み立てる**純関数のみ**で構成する
+ * （SpreadsheetApp・Utilities 等のGASグローバルに依存しない＝vitestで検証可能）。
+ *
  * - 課税（適格）: 要件書§6-3の記載事項6項目を満たす（登録番号・適用税率・税率ごとの消費税額等）。
  * - 免税: 要件書§6-4の区分記載請求書（登録番号なし・税率ごとの**税込**対価の額）。
  * - すべての計算値に根拠注記を出す（N-1）。
- *
- * A4縦のレイアウト品質は V-1 スパイクの実機確認後に微調整する（TODO: V-1確定後）。
+ * - A4縦のレイアウト品質は受入E2Eの目視で微調整する。
  */
 
 import type { CalcResult } from './calc';
-import { TAX_CATEGORY_LABELS, TEMPLATE_SHEET_NAME, type DocumentType } from './layout';
+import { TAX_CATEGORY_LABELS } from './layout';
 import type { IssuerProfile } from './profile';
 import type { DocumentData } from './sheets';
 
 /** 帳票の列数（A〜F）。 */
 const COLS = 6;
+/** クリア対象の行数（前回描画の残骸を確実に消す上限）。 */
+const CLEAR_ROWS = 120;
 
-/** PDF出力対象の範囲情報。 */
-export interface TemplateRenderResult {
-  readonly sheetId: number;
+/** 列幅（px）。旧コンテナ版と同じ配分（A4縦・約700px幅を6列に配分）。 */
+const COLUMN_WIDTHS = [180, 90, 70, 90, 90, 110];
+
+/** 書式用の色（Sheets APIは0..1のRGB）。 */
+const COLOR_HEADER_BG = { red: 0xef / 255, green: 0xef / 255, blue: 0xef / 255 };
+const COLOR_NOTE_TEXT = { red: 0x55 / 255, green: 0x55 / 255, blue: 0x55 / 255 };
+
+type SheetsRequest = GoogleAppsScript.Sheets.Schema.Request;
+type GridRange = GoogleAppsScript.Sheets.Schema.GridRange;
+
+/** batchUpdate リクエスト列と export 用レンジ。 */
+export interface TemplateRender {
+  readonly requests: readonly SheetsRequest[];
   /** 出力範囲（A1形式。例 'A1:F58'）。 */
   readonly range: string;
 }
@@ -30,32 +44,38 @@ function yen(value: number): string {
   return `¥${value.toLocaleString('ja-JP')}`;
 }
 
-/** 日付表記。 */
-function dateText(date: Date): string {
-  return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy年MM月dd日');
+/** 日付表記（スクリプトタイムゾーン=Asia/Tokyo前提。naming.ts と同じ割り切り）。 */
+function dateTextJa(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}年${m}月${d}日`;
+}
+
+/** 0始まり行番号の GridRange（sheetId=0固定。列は全幅が既定）。 */
+function rangeOf(sheetId: number, startRow: number, endRow: number, startCol = 0, endCol = COLS): GridRange {
+  return { sheetId, startRowIndex: startRow, endRowIndex: endRow, startColumnIndex: startCol, endColumnIndex: endCol };
+}
+
+/** セル値配列 → RowData（number は numberValue・それ以外は stringValue）。 */
+function toRowData(cells: readonly (string | number)[]): GoogleAppsScript.Sheets.Schema.RowData {
+  return {
+    values: cells.map((cell) => ({
+      userEnteredValue: typeof cell === 'number' ? { numberValue: cell } : { stringValue: cell },
+    })),
+  };
 }
 
 /**
- * 帳票シートを描画して出力範囲を返す。
+ * 帳票の batchUpdate リクエスト列を組み立てる（純関数）。
+ * @param sheetId 描画先シートID（本番は scratch.ts の先頭シート=0）
  */
-export function renderTemplate(
+export function buildTemplateRequests(
   doc: DocumentData,
   result: CalcResult,
   profile: IssuerProfile,
-): TemplateRenderResult {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(TEMPLATE_SHEET_NAME);
-  if (sheet === null) {
-    sheet = ss.insertSheet(TEMPLATE_SHEET_NAME);
-  }
-  sheet.hideSheet();
-  sheet.clear();
-  sheet.clearFormats();
-
-  // 列幅（A4縦・約700px幅を6列に配分。V-1確定後に微調整）
-  const widths = [180, 90, 70, 90, 90, 110];
-  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
-
+  sheetId = 0,
+): TemplateRender {
   const title = doc.type === 'invoice' ? '請求書' : '見積書';
   const rows: (string | number)[][] = [];
   const pushRow = (cells: (string | number)[]): number => {
@@ -69,7 +89,7 @@ export function renderTemplate(
   const titleRow = pushRow([title]);
   pushRow(['']);
   const clientRow = pushRow([`${doc.clientName} 御中`, '', '', '書類番号', '', doc.docNumber]);
-  pushRow(['', '', '', '発行日', '', dateText(doc.issueDate)]);
+  pushRow(['', '', '', '発行日', '', dateTextJa(doc.issueDate)]);
   if (profile.taxable && profile.registrationNumber !== '') {
     pushRow(['', '', '', '登録番号', '', profile.registrationNumber]);
   }
@@ -162,44 +182,155 @@ export function renderTemplate(
     for (const note of notes) pushRow([note]);
   }
 
-  // ---- 書き込み ----
   const lastRow = rows.length;
-  sheet.getRange(1, 1, lastRow, COLS).setValues(rows).setFontSize(10).setVerticalAlignment('middle');
 
-  // 書式
-  sheet
-    .getRange(titleRow, 1, 1, COLS)
-    .merge()
-    .setFontSize(18)
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center');
-  sheet.getRange(clientRow, 1).setFontSize(12).setFontWeight('bold');
-  sheet
-    .getRange(headlineRow, 1, 1, 2)
-    .setFontSize(14)
-    .setFontWeight('bold')
-    .setBorder(null, null, true, null, null, null);
-  sheet
-    .getRange(tableHeaderRow, 1, 1, COLS)
-    .setFontWeight('bold')
-    .setBackground('#efefef')
-    .setBorder(true, true, true, true, true, true);
+  // ---- リクエスト列（クリア → 値 → 書式）----
+  const requests: SheetsRequest[] = [];
+
+  // 前回描画の結合・値・書式をクリア
+  requests.push({ unmergeCells: { range: rangeOf(sheetId, 0, CLEAR_ROWS) } });
+  requests.push({
+    updateCells: { range: rangeOf(sheetId, 0, CLEAR_ROWS), fields: 'userEnteredValue,userEnteredFormat' },
+  });
+
+  // 値の一括書き込み
+  requests.push({
+    updateCells: {
+      range: rangeOf(sheetId, 0, lastRow),
+      fields: 'userEnteredValue',
+      rows: rows.map(toRowData),
+    },
+  });
+
+  // 基本書式（フォントサイズ10・上下中央）
+  requests.push({
+    repeatCell: {
+      range: rangeOf(sheetId, 0, lastRow),
+      cell: { userEnteredFormat: { textFormat: { fontSize: 10 }, verticalAlignment: 'MIDDLE' } },
+      fields: 'userEnteredFormat(textFormat.fontSize,verticalAlignment)',
+    },
+  });
+
+  // タイトル（結合・18pt太字・中央・行高）
+  requests.push({ mergeCells: { range: rangeOf(sheetId, titleRow - 1, titleRow), mergeType: 'MERGE_ALL' } });
+  requests.push({
+    repeatCell: {
+      range: rangeOf(sheetId, titleRow - 1, titleRow),
+      cell: { userEnteredFormat: { textFormat: { fontSize: 18, bold: true }, horizontalAlignment: 'CENTER' } },
+      fields: 'userEnteredFormat(textFormat,horizontalAlignment)',
+    },
+  });
+  requests.push({
+    updateDimensionProperties: {
+      range: { sheetId, dimension: 'ROWS', startIndex: titleRow - 1, endIndex: titleRow },
+      properties: { pixelSize: 40 },
+      fields: 'pixelSize',
+    },
+  });
+
+  // 宛名（12pt太字）
+  requests.push({
+    repeatCell: {
+      range: rangeOf(sheetId, clientRow - 1, clientRow, 0, 1),
+      cell: { userEnteredFormat: { textFormat: { fontSize: 12, bold: true } } },
+      fields: 'userEnteredFormat.textFormat',
+    },
+  });
+
+  // 金額サマリ（14pt太字・下罫線）
+  requests.push({
+    repeatCell: {
+      range: rangeOf(sheetId, headlineRow - 1, headlineRow, 0, 2),
+      cell: { userEnteredFormat: { textFormat: { fontSize: 14, bold: true } } },
+      fields: 'userEnteredFormat.textFormat',
+    },
+  });
+  requests.push({
+    updateBorders: {
+      range: rangeOf(sheetId, headlineRow - 1, headlineRow, 0, 2),
+      bottom: { style: 'SOLID' },
+    },
+  });
+
+  // 明細ヘッダ（太字・背景・罫線）
+  requests.push({
+    repeatCell: {
+      range: rangeOf(sheetId, tableHeaderRow - 1, tableHeaderRow),
+      cell: { userEnteredFormat: { textFormat: { bold: true }, backgroundColor: COLOR_HEADER_BG } },
+      fields: 'userEnteredFormat(textFormat.bold,backgroundColor)',
+    },
+  });
+  const tableEndRow = firstItemRow > 0 ? lastItemRow : tableHeaderRow;
+  requests.push({
+    updateBorders: {
+      range: rangeOf(sheetId, tableHeaderRow - 1, tableEndRow),
+      top: { style: 'SOLID' },
+      bottom: { style: 'SOLID' },
+      left: { style: 'SOLID' },
+      right: { style: 'SOLID' },
+      innerHorizontal: { style: 'SOLID' },
+      innerVertical: { style: 'SOLID' },
+    },
+  });
+
+  // 明細の数値書式（数量・単価=#,##0.###／金額=#,##0）
   if (firstItemRow > 0) {
-    sheet
-      .getRange(firstItemRow, 1, lastItemRow - firstItemRow + 1, COLS)
-      .setBorder(true, true, true, true, true, true);
-    sheet
-      .getRange(firstItemRow, 2, lastItemRow - firstItemRow + 1, 2)
-      .setNumberFormat('#,##0.###');
-    sheet
-      .getRange(firstItemRow, COLS, lastItemRow - firstItemRow + 1, 1)
-      .setNumberFormat('#,##0');
-  }
-  sheet.getRange(summaryStart, 4, summaryEnd - summaryStart + 1, 3).setBorder(true, true, true, true, false, true);
-  if (notesStart > 0) {
-    sheet.getRange(notesStart, 1).setFontWeight('bold');
-    sheet.getRange(notesStart, 1, lastRow - notesStart + 1, 1).setFontSize(8).setFontColor('#555555');
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 1, 3),
+        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '#,##0.###' } } },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    });
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, COLS - 1, COLS),
+        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '#,##0' } } },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    });
   }
 
-  return { sheetId: sheet.getSheetId(), range: `A1:F${lastRow}` };
+  // 集計ブロック（外枠＋内側横罫線）
+  requests.push({
+    updateBorders: {
+      range: rangeOf(sheetId, summaryStart - 1, summaryEnd, 3, COLS),
+      top: { style: 'SOLID' },
+      bottom: { style: 'SOLID' },
+      left: { style: 'SOLID' },
+      right: { style: 'SOLID' },
+      innerHorizontal: { style: 'SOLID' },
+    },
+  });
+
+  // 注記（見出し太字・本文8pt灰色）
+  if (notesStart > 0) {
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, notesStart - 1, notesStart, 0, 1),
+        cell: { userEnteredFormat: { textFormat: { bold: true } } },
+        fields: 'userEnteredFormat.textFormat.bold',
+      },
+    });
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, notesStart, lastRow, 0, 1),
+        cell: { userEnteredFormat: { textFormat: { fontSize: 8, foregroundColor: COLOR_NOTE_TEXT } } },
+        fields: 'userEnteredFormat.textFormat(fontSize,foregroundColor)',
+      },
+    });
+  }
+
+  // 列幅
+  COLUMN_WIDTHS.forEach((width, index) => {
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: 'COLUMNS', startIndex: index, endIndex: index + 1 },
+        properties: { pixelSize: width },
+        fields: 'pixelSize',
+      },
+    });
+  });
+
+  return { requests, range: `A1:F${lastRow}` };
 }

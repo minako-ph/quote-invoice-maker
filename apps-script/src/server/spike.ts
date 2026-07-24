@@ -1,10 +1,8 @@
 /**
  * V-1/V-2 スパイク（引継書§12-3。人間がテストシートのスクリプトエディタから実行する）。
  *
- * - exportPdfProbe(): V-1「Sheets export URL が4スコープ構成のトークンで認可されるか」
- *   F-2: 本番フロー同型（固定ダミー書類 → calcDocument → renderTemplate（非表示の_帳票）→
- *   exportRenderedPdf（showSheet→export→finally hideSheet））で検証する。
- *   これで検証対象が「4スコープトークンの export URL 認可」に純化される。
+ * - exportPdfProbe(): V-1**確定経路**の本番同型検証（固定ダミー書類 → calcDocument →
+ *   スクラッチ確保 → Sheets Advanced Service で描画 → export URL＝exportDocumentPdf）。
  * - driveProbe():     V-2「Advanced Drive Service（drive.file）でフォルダ作成・PDF保存ができるか」
  *
  * どちらも結果を Logger と戻り値の文字列で返す。人間は実行結果を docs/decisions.md に記録する
@@ -13,10 +11,9 @@
  */
 
 import { calcDocument, type LineItemInput } from './calc';
-import { buildExportUrl, exportRenderedPdf, isPdfBytes } from './pdf';
+import { buildExportUrl, exportDocumentPdf, isPdfBytes } from './pdf';
 import { DEFAULT_PROFILE, type IssuerProfile } from './profile';
 import type { DocumentData } from './sheets';
-import { renderTemplate } from './template';
 
 /** V-1検証用の固定明細（サンプル書類相当。源泉対象＋軽減税率＋対象外を含む）。 */
 const PROBE_ITEMS: readonly LineItemInput[] = [
@@ -37,12 +34,12 @@ const PROBE_PROFILE: IssuerProfile = {
 };
 
 /**
- * V-1: 本番フロー同型で _帳票 を描画し、export URL からPDFを取得してみる。
- * 成功条件: exportRenderedPdf が %PDF 検査込みで Blob を返すこと。
- * 成功後、_帳票 シートを再表示すればA4差し込み結果を目視できる。
+ * V-1: **確定経路**（スクラッチ確保→Sheets Advanced Serviceで帳票描画→export URL）の
+ * 本番同型検証。成功条件: exportDocumentPdf が %PDF 検査込みで Blob を返すこと。
+ * 成功後、Drive「帳票」フォルダ内の「_帳票レンダリング用…」を開けばA4差し込み結果を目視できる。
  */
 export function probeExportPdf(): string {
-  const lines: string[] = ['=== V-1 exportPdfProbe（本番フロー同型） ==='];
+  const lines: string[] = ['=== V-1 exportPdfProbe（確定経路・本番フロー同型） ==='];
   try {
     const doc: DocumentData = {
       type: 'invoice',
@@ -62,14 +59,11 @@ export function probeExportPdf(): string {
       withholdingEnabled: true,
       withholdingBase: 'exTax',
     });
-    const rendered = renderTemplate(doc, result, PROBE_PROFILE);
-    lines.push(`帳票描画: OK（gid=${rendered.sheetId}, range=${rendered.range}）`);
-
-    const blob = exportRenderedPdf(rendered, '_v1probe.pdf');
+    const blob = exportDocumentPdf(doc, result, PROBE_PROFILE, '_v1probe.pdf');
     const bytes = blob.getBytes();
-    lines.push(`export fetch: OK（${bytes.length} bytes）`);
+    lines.push(`描画＋export fetch: OK（${bytes.length} bytes）`);
     lines.push(`%PDFマジックバイト: ${isPdfBytes(bytes) ? 'OK' : 'NG'}`);
-    lines.push('→ V-1 成立候補。_帳票シートを再表示するとA4差し込み結果を目視できます');
+    lines.push('→ V-1 確定経路の動作OK。Drive「帳票」内の「_帳票レンダリング用…」でA4差し込みを目視できます');
     lines.push('（レイアウト品質はサンプル書類のE2Eで最終確認）');
   } catch (e) {
     lines.push(`失敗: ${e instanceof Error ? e.message : String(e)}`);

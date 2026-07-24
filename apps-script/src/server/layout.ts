@@ -26,9 +26,6 @@ export function inputSheetNameOf(type: DocumentType, docNumber: string): string 
   return `${DOC_TYPE_LABELS[type]}_${docNumber}`;
 }
 
-/** 帳票シート名（非表示1枚を使い回す。引継書§6）。 */
-export const TEMPLATE_SHEET_NAME = '_帳票';
-
 /** 台帳シート名（FR-12）。 */
 export const LEDGER_SHEET_NAME = '台帳';
 

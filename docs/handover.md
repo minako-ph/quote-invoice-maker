@@ -30,10 +30,11 @@
 [利用者のGoogle Sheet]
    ↕ (spreadsheets.currentonly)
 [GASアドオン（standaloneスクリプト＋版指定デプロイ）]
-   ├─ 入力シート（1書類=1シート）／帳票シート「_帳票」（非表示・使い回し）／台帳シート
+   ├─ 入力シート（1書類=1シート）／台帳シート
    ├─ 計算エンジン calc.ts（純関数・golden対象・唯一の計算源）
-   ├─ PDF生成: Sheets export URL＋OAuthトークン（V-1）
-   ├─ Drive保存: Advanced Drive Service／drive.file（V-2）
+   ├─ 帳票描画: アプリ作成の作業スプレッドシート（scratch.ts・1ユーザー1つ）＋Sheets Advanced Service v4 batchUpdate（V-1確定）
+   ├─ PDF生成: 作業ファイルの export URL＋OAuthトークン（V-1確定）
+   ├─ Drive保存: Advanced Drive Service v3／drive.file（V-2確定）
    ├─ 無料枠: UserProperties月次カウンタ（LockService保護）
    └─ ライセンス: キーをUserProperties保存→/license/verify照会
         ↓ HTTPS (script.external_request／urlFetchWhitelist)
@@ -77,11 +78,11 @@ quote-invoice-maker/
 ## 6. GAS実装の要点
 
 - clasp＋TypeScript＋esbuild（柱3 `apps-script/build.mjs`を移植: IIFE＋globalName、ENTRY_POINTSごとのトップレベル関数スタブをfooter生成、appsscript.json/sidebar.htmlをdist/へコピー）。素のHtmlService＋`google.script.run`。凝ったフレームワーク不要。
-- **シート設計**: 入力シートは1書類=1シート（シート名「請求書_<書類番号>」等）。固定レイアウトで**セル座標は`layout.ts`定数に集約**。ヘッダブロック（種別・書類番号・発行日・取引年月日/期間・宛名・件名・支払期限or有効期限）＋明細20行（品目/数量/単価(税抜)/税率10%・8%・対象外/源泉対象✓）＋集計ブロック（GASが値を書く）＋備考。帳票シート「_帳票」は非表示1枚を使い回し、出力の都度差し込む。台帳シート「台帳」はFR-12列を追記。
+- **シート設計**: 入力シートは1書類=1シート（シート名「請求書_<書類番号>」等）。固定レイアウトで**セル座標は`layout.ts`定数に集約**。ヘッダブロック（種別・書類番号・発行日・取引年月日/期間・宛名・件名・支払期限or有効期限）＋明細20行（品目/数量/単価(税抜)/税率10%・8%・対象外/源泉対象✓）＋集計ブロック（GASが値を書く）＋備考。帳票はコンテナ内ではなく**アプリ作成の作業スプレッドシート**（V-1確定・下記PDF生成節）に出力の都度差し込む。台帳シート「台帳」はFR-12列を追記。
 - **計算源はcalc.tsのみ**。シート数式で税計算を二重実装しない（golden単一検証・N-1根拠の一元化のため）。再計算はサイドバーの「プレビュー/再計算」とPDF出力時。
 - **計算規則（calc.ts、goldenは要件書§6-6）**: ①明細額=数量×単価を1円未満切捨てで整数化（数量は小数可） ②税率区分ごとに明細額を合計→消費税=区分合計×税率を設定方式で**1回**端数処理（割戻し固定） ③源泉対象額: 税抜=対象行明細額の合計／税込=対象行明細額×(1+行税率)を端数処理せず合算 ④源泉税=対象額に10.21%（100万円超部分は二段階式）を適用し**最後に1回だけ**1円未満切捨て ⑤差引請求額=税込合計−源泉税 ⑥`notes[]`に根拠文字列を生成（N-1。例:「消費税は税率区分ごとに切捨て（1書類につき税率ごとに1回）」「源泉徴収税額＝税抜報酬額×10.21%（100万円超部分は20.42%）・1円未満切捨て」）。
-- **PDF生成（V-1・最優先スパイク）**: 一次案=UrlFetchAppで`https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&gid={帳票gid}&range=...&size=A4&portrait=true&fitw=true&gridlines=false`＋`Authorization: Bearer ScriptApp.getOAuthToken()`（パラメータの実挙動もスパイクで確認）。**未検証**: 4スコープ構成のトークンでこのエンドポイントが認可されるか。フォールバック順: (1) drive.fileでアプリが新規作成したスプレッドシートへ帳票を複製→そのファイルのexport URL → (2) **停止して人間判断を仰ぐ**。スコープ追加や別方式への切替は要件書CR-3の改訂＝事業主の明示判断が必要。**黙って代替しない。**
-- **Drive保存（V-2）**: DriveAppは使わない（フルdriveスコープを要求しがち）。**Advanced Drive Service（Drive API v3）**でフォルダ作成（「帳票」→「請求書」「見積書」）とPDFアップロード。フォルダIDはDocumentPropertiesに保持し、消えていたら再作成。drive.fileは「アプリが作成したファイル/フォルダ」に読み書き可——この前提をスパイクで実機確認してから本実装。
+- **PDF生成（V-1・確定＝2026-07-24実測）**: 一次案（コンテナ自身のexport URL）は**HTTP 404で不成立**（ブラウザ同一URLは成功＝4スコープトークンの認可起因）。採用方式=フォールバック(1): **アプリ（drive.file）が作成した帳票作業スプレッドシート（scratch.ts・1ユーザー1つ・「帳票」フォルダ直下・IDはUserProperties）に Sheets Advanced Service（v4 batchUpdate）で帳票を描画**（SpreadsheetApp.openByIdはdrive.file下で不可＝FB(1)②×の実測）→ そのファイルの `https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&...`＋`Authorization: Bearer ScriptApp.getOAuthToken()` でPDF取得（%PDFマジックバイト検査つき）。帳票リクエスト生成は template.ts の純関数 `buildTemplateRequests`。スクラッチ競合はユーザーロック（quota.consumeQuota内で全工程実行）で担保。スコープは4点のまま（CR-3）。
+- **Drive保存（V-2・確定＝2026-07-24実測）**: DriveAppは使わない（フルdriveスコープを要求しがち）。**Advanced Drive Service（Drive API v3）**でフォルダ作成（「帳票」→「請求書」「見積書」）とPDFアップロード。フォルダIDはDocumentPropertiesに保持し、消えていたら再作成（trashed判定はfields明示＝F-3）。drive.fileは「アプリが作成したファイル/フォルダ」に読み書き可——実機確認済み。
 - **命名（naming.ts・純関数）**: `YYYYMMDD_取引先名_税込金額.pdf`（日付=発行日、金額=税込整数）。取引先名は前後空白・改行/制御文字除去、`/`等の置換のみ（㈱等はそのまま=国税庁例示準拠）。同名衝突は`_2`連番。
 - **無料枠（quota.ts）**: UserProperties `usage={month:'YYYY-MM', used:n}`。月キーは`Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM')`。消費は`LockService.getUserLock()`内で「残数確認→PDF保存成功→+1」。月替りで自動リセット。超過はgracefulに停止しPro案内（文言はmarketing §8のverbatim）。
 - **ライセンス（license.ts）**: キーはUserProperties保存。検証は`/license/verify`委譲（GAS側でJWTローカル検証をしない＝`LICENSE_PUBKEY`は持たない）。結果は短時間（10分程度）UserPropertiesにキャッシュ。検証不能時はfail-closed（Free扱い）＋サイドバーに状態表示（N-4）。

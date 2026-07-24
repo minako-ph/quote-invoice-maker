@@ -11,10 +11,9 @@ import { savePdfToDrive } from './drive';
 import { appendLedgerRow } from './ledger';
 import { effectiveLimit, licenseStatus, removeLicenseKey, storeLicenseKey, type LicenseStatus } from './license';
 import { buildPdfFileName } from './naming';
-import { exportRenderedPdf } from './pdf';
+import { exportDocumentPdf } from './pdf';
 import { isProfileConfigured, loadProfile, storeProfile, type IssuerProfile, type ProfileValidation } from './profile';
 import { FREE_MONTHLY_LIMIT, consumeQuota, readUsage, remainingOf, type Usage } from './quota';
-import { renderTemplate } from './template';
 import { activeInputSheet, convertQuoteToInvoice, createInputSheet, readDocument, writeSummary, type DocumentData } from './sheets';
 import { createSampleQuote } from './sample';
 import type { DocumentType } from './layout';
@@ -133,8 +132,11 @@ function consumeReviewPromptFlag(): boolean {
 }
 
 /**
- * PDF出力・保存の一気通貫（FR-7/8/9/12。引継書§6の消費順序）:
- * 再計算 → 帳票差し込み → 無料枠ロック内で「残数確認 → PDF生成・Drive保存 → +1」→ 台帳追記。
+ * PDF出力・保存の一気通貫（FR-7/8/9/12。引継書§6の消費順序・V-1確定構成）:
+ * 再計算 → 無料枠ロック内で「残数確認 → 作業ファイル確保・帳票描画（Sheets Advanced Service）・
+ * PDF取得・Drive保存 → +1」→ 台帳追記。
+ * スクラッチファイル（1ユーザー1つ）の競合防止は consumeQuota のユーザーロックで担保する
+ * （decisions.md 2026-07-24）。
  *
  * 無料枠超過は Error('QUOTA_EXCEEDED') をそのまま投げる（サイドバーが marketing §8 の
  * verbatim 文言でPro案内を表示する）。
@@ -159,7 +161,6 @@ export function exportActiveToPdf(): ExportResult {
   }
   const result = calcDocument(doc.items, settingsOf(doc, profile));
   writeSummary(sheet, result);
-  const rendered = renderTemplate(doc, result, profile);
   SpreadsheetApp.flush();
 
   const fileName = buildPdfFileName(doc.issueDate, doc.clientName, result.total);
@@ -167,8 +168,8 @@ export function exportActiveToPdf(): ExportResult {
   const limit = effectiveLimit();
 
   const saved = consumeQuota(limit, () => {
-    // F-2: 非表示の_帳票を export の間だけ再表示する共通ヘルパ経由（本番・スパイク同型）
-    const blob = exportRenderedPdf(rendered, fileName);
+    // V-1確定経路: スクラッチ確保→Sheets batchUpdate描画→export→保存（全工程をユーザーロック内で）
+    const blob = exportDocumentPdf(doc, result, profile, fileName);
     return savePdfToDrive(blob, fileName, doc.type);
   });
 
