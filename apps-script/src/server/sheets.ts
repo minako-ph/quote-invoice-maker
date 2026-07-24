@@ -17,7 +17,7 @@ import {
   NOTES,
   REMARKS,
   SUMMARY,
-  TAX_CATEGORY_BY_LABEL,
+  taxCategoryOfCellValue,
   TAX_CATEGORY_LABELS,
   TAX_CATEGORY_OPTIONS,
   docTypeOfLabel,
@@ -240,11 +240,13 @@ export function readDocument(sheet: GoogleAppsScript.Spreadsheet.Sheet): Documen
     const quantity = typeof quantityRaw === 'number' ? quantityRaw : Number(quantityRaw) || 0;
     const unitPrice = typeof unitPriceRaw === 'number' ? unitPriceRaw : Number(unitPriceRaw) || 0;
     if (name === '' && quantity === 0 && unitPrice === 0) continue;
-    const taxLabel = String(row[ITEMS.col.taxCategory - 1] ?? '').trim();
-    const category: TaxCategory | undefined = TAX_CATEGORY_BY_LABEL[taxLabel];
+    // 生値のまま解釈する（旧ラベル'10%'がSheetsで数値0.1に自動変換されたセルも救済。layout.ts）
+    const category: TaxCategory | undefined = taxCategoryOfCellValue(row[ITEMS.col.taxCategory - 1]);
     if (category === undefined) {
       // F-7: 空欄・プルダウン外の値を黙って10%にしない（根拠のない既定を作らない）
-      throw new Error(`明細${i + 1}行目の税率を選択してください（10% / 8%（軽減）/ 対象外）`);
+      throw new Error(
+        `明細${i + 1}行目の税率を選択してください（${TAX_CATEGORY_OPTIONS.join(' / ')}）`,
+      );
     }
     items.push({
       name,

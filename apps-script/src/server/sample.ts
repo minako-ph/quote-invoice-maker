@@ -6,8 +6,8 @@
 import type { LineItemInput } from './calc';
 import { createInputSheet } from './sheets';
 
-/** サンプル明細（源泉対象のデザイン料＋軽減税率の物品＋対象外の立替費）。 */
-const SAMPLE_ITEMS: readonly LineItemInput[] = [
+/** サンプル明細（源泉対象のデザイン料＋軽減税率の物品＋対象外の立替費。往復テストで参照）。 */
+export const SAMPLE_ITEMS: readonly LineItemInput[] = [
   { name: 'Webサイトデザイン制作', quantity: 1, unitPrice: 100000, taxCategory: '10', withholding: true },
   { name: '撮影用飲食物（軽減税率対象）', quantity: 2, unitPrice: 1500, taxCategory: '8', withholding: false },
   { name: '交通費実費（立替）', quantity: 1, unitPrice: 3200, taxCategory: 'none', withholding: false },

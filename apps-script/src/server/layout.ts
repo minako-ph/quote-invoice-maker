@@ -77,22 +77,54 @@ export const ITEMS = {
   headers: ['品目', '数量', '単価（税抜）', '税率', '源泉対象'],
 } as const;
 
-/** 税率プルダウンの選択肢（表示値）。 */
-export const TAX_CATEGORY_OPTIONS = ['10%', '8%（軽減）', '対象外'] as const;
-
-/** 税率表示値 → TaxCategory 変換表。 */
-export const TAX_CATEGORY_BY_LABEL: Record<string, '10' | '8' | 'none'> = {
-  '10%': '10',
-  '8%（軽減）': '8',
-  対象外: 'none',
-};
-
-/** TaxCategory → 税率表示値。 */
+/**
+ * TaxCategory → 税率表示値（**唯一のラベル定義**。プルダウン・サンプル書込・パーサ・
+ * エラーメッセージすべてがここを参照する）。
+ *
+ * 実機バグ（2026-07-24）: 表示値 '10%' は Sheets により数値 0.1 へ自動変換される
+ * （setValueでもプルダウン選択でも発生）ため、**数値へ自動変換されない文字列**
+ * 「10%（標準）」に統一した。'8%（軽減）'・'対象外' は非数値文字を含むため元から安全。
+ */
 export const TAX_CATEGORY_LABELS: Record<'10' | '8' | 'none', string> = {
-  '10': '10%',
+  '10': '10%（標準）',
   '8': '8%（軽減）',
   none: '対象外',
 };
+
+/** 税率プルダウンの選択肢（表示値。TAX_CATEGORY_LABELS から導出）。 */
+export const TAX_CATEGORY_OPTIONS = [
+  TAX_CATEGORY_LABELS['10'],
+  TAX_CATEGORY_LABELS['8'],
+  TAX_CATEGORY_LABELS.none,
+] as const;
+
+/** 税率表示値 → TaxCategory 変換表（TAX_CATEGORY_LABELS の逆引き）。 */
+export const TAX_CATEGORY_BY_LABEL: Record<string, '10' | '8' | 'none'> = {
+  [TAX_CATEGORY_LABELS['10']]: '10',
+  [TAX_CATEGORY_LABELS['8']]: '8',
+  [TAX_CATEGORY_LABELS.none]: 'none',
+};
+
+/**
+ * 税率セルの生値を TaxCategory に解釈する（純関数・堅牢化）。
+ * 現行ラベルに加え、後方互換として次を受理する（既存シートの救済）:
+ * - 数値 0.1／0.08（旧ラベル '10%' 等が Sheets により数値へ自動変換されたセル）
+ * - 旧文字列ラベル '10%'／'8%'
+ * 判定不能は undefined（呼び出し側がF-7エラーにする）。
+ */
+export function taxCategoryOfCellValue(raw: unknown): '10' | '8' | 'none' | undefined {
+  if (typeof raw === 'number') {
+    if (Math.abs(raw - 0.1) < 1e-9) return '10';
+    if (Math.abs(raw - 0.08) < 1e-9) return '8';
+    return undefined;
+  }
+  const label = String(raw ?? '').trim();
+  const current = TAX_CATEGORY_BY_LABEL[label];
+  if (current !== undefined) return current;
+  if (label === '10%') return '10';
+  if (label === '8%') return '8';
+  return undefined;
+}
 
 /** 集計ブロック（GASが値を書く。ラベルはD列・値はE列に縦に並べる）。 */
 export const SUMMARY = {
