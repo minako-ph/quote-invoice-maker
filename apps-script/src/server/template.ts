@@ -22,15 +22,18 @@ const COLS = 6;
 /** クリア対象の行数（前回描画の残骸を確実に消す上限）。 */
 const CLEAR_ROWS = 120;
 
-/** 列幅（px）。A4縦・約700px幅を6列に配分（E=※源泉マーク列は狭く）。 */
+/** 列幅（px）。A4縦・約700px幅を6列に配分（E=※源泉マーク列。源泉OFF時は極小化）。 */
 const COLUMN_WIDTHS = [180, 70, 90, 90, 60, 110];
+/** 源泉OFF時のE列幅（空列を視覚上ほぼ消す）。 */
+const WITHHOLDING_COL_WIDTH_OFF = 12;
+/** E列（※源泉マーク列）のインデックス。 */
+const WITHHOLDING_COL_INDEX = 4;
 
 /**
  * 数値書式（実機PDF目視の磨き込み・2026-07-24）:
- * '#,##0.###' は整数が「1.」と末尾ピリオド付きで表示されるため使わない。
- * 数量='#,##0.##'（1→1・1.5→1.5）／単価・金額='#,##0'。
+ * '#,##0.###' も '#,##0.##' も、Sheets仕様で整数に小数点記号「1.」が表示される（実機確認2回目で判明）。
+ * **数量列には numberFormat を設定しない**（自動表示: 1→1・1.5→1.5）。単価・金額='#,##0'。
  */
-const FORMAT_QUANTITY = '#,##0.##';
 const FORMAT_AMOUNT = '#,##0';
 
 /** 注記の折返し行高の見積り（8pt・A:F結合幅を1行約45文字で換算）。 */
@@ -298,15 +301,8 @@ export function buildTemplateRequests(
     },
   });
 
-  // 明細の数値書式（数量=#,##0.##／単価・金額=#,##0。末尾ピリオド表示の回避）
+  // 明細の数値書式（単価・金額=#,##0。数量列は numberFormat を設定しない＝末尾ピリオド表示の回避）
   if (firstItemRow > 0) {
-    requests.push({
-      repeatCell: {
-        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 1, 2),
-        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: FORMAT_QUANTITY } } },
-        fields: 'userEnteredFormat.numberFormat',
-      },
-    });
     requests.push({
       repeatCell: {
         range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 2, 3),
@@ -377,12 +373,14 @@ export function buildTemplateRequests(
     });
   }
 
-  // 列幅
+  // 列幅（E列=※源泉マーク列は源泉OFF時に極小化して空列の枠が目立たないようにする）
   COLUMN_WIDTHS.forEach((width, index) => {
+    const pixelSize =
+      index === WITHHOLDING_COL_INDEX && !showWithholdingMark ? WITHHOLDING_COL_WIDTH_OFF : width;
     requests.push({
       updateDimensionProperties: {
         range: { sheetId, dimension: 'COLUMNS', startIndex: index, endIndex: index + 1 },
-        properties: { pixelSize: width },
+        properties: { pixelSize },
         fields: 'pixelSize',
       },
     });

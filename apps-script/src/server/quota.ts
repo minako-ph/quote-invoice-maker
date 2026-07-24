@@ -57,6 +57,11 @@ export function currentMonthKey(): string {
   return Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM');
 }
 
+/** 開発用: 当月使用量カウンタを削除する（(dev)メニュー専用。版指定デプロイ前に削除）。 */
+export function clearUsageForDev(): void {
+  PropertiesService.getUserProperties().deleteProperty(USAGE_PROP_KEY);
+}
+
 /** 現在の使用量を読む（GAS専用）。 */
 export function readUsage(): Usage {
   const props = PropertiesService.getUserProperties();

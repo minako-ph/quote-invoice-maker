@@ -38,6 +38,7 @@ const ENTRY_POINTS = [
   'devRunExportPdfFallback1',
   'devRunSheetsApiWrite',
   'devRunDriveProbe',
+  'devResetUsage',
   'exportPdfProbe',
   'exportPdfFallback1Probe',
   'sheetsApiWriteProbe',

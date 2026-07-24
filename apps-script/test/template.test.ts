@@ -151,21 +151,45 @@ describe('buildTemplateRequests（FR-5/6・N-1）', () => {
     expect(rangeEndRow).toBeGreaterThanOrEqual((noteCell?.row ?? 0) + 1);
   });
 
-  it('数値書式パターンは末尾ピリオド表示を起こさない（#,##0 / #,##0.## のみ）', () => {
+  it('数量列（B列）には numberFormat を設定しない（末尾ピリオド「1.」表示の回避）', () => {
+    // 経緯: '#,##0.###' も '#,##0.##' も Sheets 仕様で整数に小数点記号が表示される（実機確認2回目で判明）。
+    // パターン文字列の検証は実描画とズレるため廃止し、「数量列に numberFormat リクエストを
+    // 出さない」ことを構造で検証する（自動表示なら 1→1・1.5→1.5 になる）。
     const doc = makeDoc();
     const result = calcDocument(doc.items, SETTINGS_G9);
     const { requests } = buildTemplateRequests(doc, result, PROFILE_TAXABLE);
-    const patterns: string[] = [];
+    const QUANTITY_COL = 1; // B列（0始まり）
     for (const request of requests) {
-      const pattern = request.repeatCell?.cell?.userEnteredFormat?.numberFormat?.pattern;
-      if (typeof pattern === 'string') patterns.push(pattern);
+      const repeat = request.repeatCell;
+      if (repeat?.cell?.userEnteredFormat?.numberFormat === undefined) continue;
+      const range = repeat.range;
+      const start = range?.startColumnIndex ?? 0;
+      const end = range?.endColumnIndex ?? 99;
+      // numberFormat を設定する範囲が数量列（B）を含まないこと
+      expect(start > QUANTITY_COL || end <= QUANTITY_COL).toBe(true);
     }
-    expect(patterns.length).toBeGreaterThan(0);
-    for (const pattern of patterns) {
-      expect(pattern.endsWith('.')).toBe(false);
-      // 「1.」表示を起こす '#,##0.###' 型（#のみの小数部3桁）を禁止し、許容セットに限定
-      expect(['#,##0', '#,##0.##']).toContain(pattern);
-    }
+  });
+
+  it('E列（※源泉）の列幅は源泉ONで通常幅・OFFで極小化される', () => {
+    const widthOfColE = (requests: readonly GoogleAppsScript.Sheets.Schema.Request[]): number | undefined => {
+      for (const request of requests) {
+        const dim = request.updateDimensionProperties;
+        if (dim?.range?.dimension !== 'COLUMNS') continue;
+        if (dim.range.startIndex === 4 && dim.range.endIndex === 5) return dim.properties?.pixelSize;
+      }
+      return undefined;
+    };
+
+    const docOn = makeDoc({ withholdingEnabled: true });
+    const resultOn = calcDocument(docOn.items, SETTINGS_G9);
+    const widthOn = widthOfColE([...buildTemplateRequests(docOn, resultOn, PROFILE_TAXABLE).requests]);
+
+    const docOff = makeDoc({ withholdingEnabled: false });
+    const resultOff = calcDocument(docOff.items, { ...SETTINGS_G9, withholdingEnabled: false });
+    const widthOff = widthOfColE([...buildTemplateRequests(docOff, resultOff, PROFILE_TAXABLE).requests]);
+
+    expect(widthOn).toBe(60);
+    expect(widthOff).toBe(12);
   });
 
   it('源泉ONでは※源泉列ヘッダと対象行マーク・脚注が出る', () => {

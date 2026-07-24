@@ -5,6 +5,7 @@
 
 import {
   convertActiveQuote,
+  devResetUsageAndReviewFlag,
   exportActiveToPdf,
   licenseClear,
   licenseGet,
@@ -39,6 +40,7 @@ export function onOpen(): void {
     .addItem('(dev) V-1フォールバック(1)スパイク', 'devRunExportPdfFallback1')
     .addItem('(dev) V-1 probe⑤ Sheets REST書込', 'devRunSheetsApiWrite')
     .addItem('(dev) V-2スパイク', 'devRunDriveProbe')
+    .addItem('(dev) 使用量リセット', 'devResetUsage')
     .addToUi();
 }
 
@@ -124,6 +126,10 @@ export function devRunSheetsApiWrite(): void {
 
 export function devRunDriveProbe(): void {
   SpreadsheetApp.getUi().alert(probeDrive());
+}
+
+export function devResetUsage(): void {
+  SpreadsheetApp.getUi().alert(devResetUsageAndReviewFlag());
 }
 
 export function exportPdfProbe(): string {
