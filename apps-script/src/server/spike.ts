@@ -183,15 +183,18 @@ export function probeExportPdfFallback1(): string {
 /**
  * 決定木(2)の検討用 probe⑤（フォールバック(1)の実測が ①○②×③○④○ だったことを受けて）:
  * ②SpreadsheetApp.openById がアプリ作成ファイルに対して不成立だったため、
- * 帳票描画を **Sheets REST API（batchUpdate・Bearer=drive.fileトークン）** で行えるかを検証する。
+ * 帳票描画を **Sheets Advanced Service（v4 batchUpdate）** で行えるかを検証する。
+ * （初版のREST直叩きは「HTTP 403=既定プロジェクトのSheets API未有効」で不成立。
+ *   Advanced Serviceならmanifest宣言で既定プロジェクトのAPIが自動有効化される。
+ *   ※標準GCPプロジェクトへ紐付けた後はSheets/Drive APIの手動有効化が必要）
  *
  * 1回の実行で:
  *   ① Drive API（drive.file）で新規スプレッドシート「_v1probe5_帳票」を作成
- *   ② Sheets REST batchUpdate で「値＋書式（太字/罫線/セル結合/列幅）」を書込 → HTTPコード表示
+ *   ② Sheets.Spreadsheets.batchUpdate で「値＋書式（太字/罫線/セル結合/列幅）」を書込
+ *      → 成立判定は「例外なく完了し応答に spreadsheetId/replies がある」こと（③と独立に判定）
  *   ③ 既存 buildExportUrl で export → HTTPコード＋%PDF判定
- * ②③とも成立なら「帳票描画=Sheets REST・export=③の経路」で本実装を組める
- * （スコープは4点から増やさない。sheets.googleapis.com の urlFetchWhitelist 追加はスコープ変更ではない）。
- * 生成した「_v1probe5_帳票」は目視確認後に手で削除してよい。
+ * ②③とも成立なら「帳票描画=Sheets Advanced Service・export=③の経路」で本実装を組める
+ * （スコープは4点から増やさない＝CR-3）。生成した「_v1probe5_帳票」は目視確認後に手で削除してよい。
  */
 export function probeSheetsApiWrite(): string {
   const lines: string[] = ['=== 決定木(2)検討 probeSheetsApiWrite（Sheets REST書込→export） ==='];
@@ -214,9 +217,13 @@ export function probeSheetsApiWrite(): string {
     return report;
   }
 
-  // ② Sheets REST batchUpdate: 値＋太字＋罫線＋セル結合＋列幅（帳票描画に必要な操作の代表4種）
+  // ② Sheets Advanced Service batchUpdate: 値＋太字＋罫線＋セル結合＋列幅（帳票描画に必要な操作の代表4種）。
+  // REST直叩き（sheets.googleapis.com）は「HTTP 403=既定プロジェクトのSheets API未有効」で不成立だったため、
+  // Advanced Service（manifest宣言で既定プロジェクトのAPIが自動有効化される）へ置換した。
+  // 成立判定は「例外なく完了し、応答に spreadsheetId / replies がある」ことで③と独立に行う。
+  let ok2 = false;
   try {
-    const batchUpdate = {
+    const batchUpdate: GoogleAppsScript.Sheets.Schema.BatchUpdateSpreadsheetRequest = {
       requests: [
         {
           updateCells: {
@@ -266,26 +273,24 @@ export function probeSheetsApiWrite(): string {
         },
       ],
     };
-    const response = UrlFetchApp.fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}:batchUpdate`,
-      {
-        method: 'post',
-        contentType: 'application/json',
-        payload: JSON.stringify(batchUpdate),
-        headers: { Authorization: `Bearer ${token}` },
-        muteHttpExceptions: true,
-      },
-    );
-    const code = response.getResponseCode();
-    lines.push(`② Sheets REST batchUpdate（値+太字+罫線+結合+列幅）: HTTP ${code}`);
-    if (code !== 200) {
-      lines.push(`   本文先頭200文字: ${response.getContentText().slice(0, 200)}`);
+    const spreadsheets = Sheets.Spreadsheets;
+    if (spreadsheets === undefined) {
+      throw new Error('Sheets Advanced Service が利用できません（appsscript.json の enabledAdvancedServices を確認）');
     }
+    const response = spreadsheets.batchUpdate(batchUpdate, fileId);
+    const hasSpreadsheetId = typeof response.spreadsheetId === 'string' && response.spreadsheetId !== '';
+    const hasReplies = Array.isArray(response.replies);
+    ok2 = hasSpreadsheetId || hasReplies;
+    lines.push(
+      `② Sheets Advanced batchUpdate（値+太字+罫線+結合+列幅）: ${ok2 ? '成立' : '不成立'}` +
+        `（spreadsheetId=${hasSpreadsheetId ? 'あり' : 'なし'} / replies=${hasReplies ? String((response.replies ?? []).length) + '件' : 'なし'}）`,
+    );
   } catch (e) {
-    lines.push(`② Sheets REST batchUpdate: 例外 — ${e instanceof Error ? e.message : String(e)}`);
+    lines.push(`② Sheets Advanced batchUpdate: 例外 — ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // ③ 既存 export URL 経路（フォールバック(1)③で成立実績あり）
+  // ③ 既存 export URL 経路（フォールバック(1)③で成立実績あり）。②と独立に成否判定する。
+  let ok3 = false;
   try {
     const url = buildExportUrl(fileId, 0, 'A1:C5');
     const response = UrlFetchApp.fetch(url, {
@@ -293,15 +298,20 @@ export function probeSheetsApiWrite(): string {
       muteHttpExceptions: true,
     });
     const code = response.getResponseCode();
-    const pdfOk = code === 200 && isPdfBytes(response.getContent());
-    lines.push(`③ export URL: HTTP ${code} ／ %PDF: ${pdfOk ? 'OK' : 'NG'}`);
+    ok3 = code === 200 && isPdfBytes(response.getContent());
+    lines.push(`③ export URL: HTTP ${code} ／ %PDF: ${ok3 ? 'OK' : 'NG'} → ${ok3 ? '成立' : '不成立'}`);
   } catch (e) {
     lines.push(`③ export URL: 例外 — ${e instanceof Error ? e.message : String(e)}`);
   }
 
   lines.push('');
-  lines.push('判定: ②③とも成立 → 「帳票描画=Sheets REST batchUpdate・export=既存URL」で本実装を組める');
-  lines.push('（PDFを開いて太字・罫線・結合・列幅が反映されているかも目視確認するとより確実）');
+  lines.push(`判定: ②Sheets書込=${ok2 ? '成立' : '不成立'} ／ ③export=${ok3 ? '成立' : '不成立'}`);
+  if (ok2 && ok3) {
+    lines.push('→ 「帳票描画=Sheets Advanced Service・export=既存URL」で本実装を組める');
+    lines.push('（PDFを開いて太字・罫線・結合・列幅が反映されているかも目視確認するとより確実）');
+  } else {
+    lines.push('→ 不成立側の表示全文をdecisions.mdへ記録（両方不成立なら停止して人間判断＝CR-3。スコープ追加はしない）');
+  }
   lines.push('生成物「_v1probe5_帳票」は目視確認後に削除してよい');
   const report = lines.join('\n');
   Logger.log(report);

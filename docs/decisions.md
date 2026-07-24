@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 【実測】probe⑤: ②Sheets REST batchUpdate=HTTP 403「has not been used in project 622292437270 / disabled」＝**既定プロジェクトのSheets API未有効**（スコープ拒否の文言ではない）・③export URL=200再現（%PDF OK）。対応=②をSheets Advanced Service（v4・manifest宣言で自動有効化）呼び出しへ置換し、REST直叩き廃止に伴い urlFetchWhitelist から sheets.googleapis.com を削除（whitelist最小化）。判定行も②③独立成否表示に修正（②403なのに「②③成立」と出る誤判定の構造的再発防止）
+- 2026-07-24 注意: Advanced Serviceの自動API有効化は**既定（デフォルト）GCPプロジェクトのみ**。標準GCPプロジェクトへ紐付けた後（gcp-oauth.md §4）は、コンソールでSheets API・Drive APIの**手動有効化**が必要（gcp-oauth.md §4に既にDrive API有効化の項あり。Sheets APIも同様に実施）
 - 2026-07-24 【実測】V-1フォールバック(1): ①アプリ作成ファイル生成○ ②SpreadsheetApp.openById×（drive.fileではSpreadsheetAppから開けない） ③アプリ作成ファイルへのexport URL○（%PDF OK） ④Drive REST export○ → exportの経路は確保。帳票描画手段が課題のためprobe⑤（Sheets REST書込）で決定木(2)を検討
 - 2026-07-24 決定木(2)検討用 probe⑤を追加: probeSheetsApiWrite()（(dev)メニュー「V-1 probe⑤ Sheets REST書込」）＝アプリ作成ファイルへSheets REST batchUpdate（値+太字+罫線+結合+列幅・Bearer=drive.fileトークン）→既存export URLで%PDF判定。このため urlFetchWhitelist に https://sheets.googleapis.com/ を追加（**スコープ変更ではない**・oauthScopes4点不変）。②③成立なら「帳票描画=Sheets REST・export=既存URL」で本実装を組む
 - 2026-07-24 【実測】V-2成立: Drive v3 Advanced Service（drive.file）でフォルダ作成・PDFアップロード・取得確認（trashed含むfields取得）すべてOK（エディタ実行）→ FR-8はAdvanced Drive方式で確定
