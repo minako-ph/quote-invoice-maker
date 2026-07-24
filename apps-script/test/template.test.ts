@@ -216,6 +216,21 @@ describe('buildTemplateRequests（FR-5/6・N-1）', () => {
     expect(stringValues(quoteCells).some((v) => v.includes('税込合計 ¥110,000 ／'))).toBe(false);
   });
 
+  it('源泉OFFは両書類とも見出し額=total・補助行なし', () => {
+    const settingsOff: CalcSettings = { ...SETTINGS_G9, withholdingEnabled: false };
+    for (const type of ['invoice', 'quote'] as const) {
+      const doc = makeDoc({ type, withholdingEnabled: false });
+      const result = calcDocument(doc.items, settingsOff);
+      expect(result.amountDue).toBe(result.total); // OFFでは同値
+      const cells = extractCells([...buildTemplateRequests(doc, result, PROFILE_TAXABLE).requests]);
+      const headlineLabel = type === 'invoice' ? 'ご請求金額' : 'お見積金額';
+      const headlineCell = cells.find((c) => c.value === headlineLabel);
+      expect(headlineCell).toBeDefined();
+      expect(cells.find((c) => c.row === headlineCell?.row && c.col === 1)?.value).toBe('¥110,000');
+      expect(stringValues(cells).some((v) => v.includes('源泉徴収税額 ▲'))).toBe(false);
+    }
+  });
+
   it('源泉ONでは※源泉列ヘッダと対象行マーク・脚注が出る', () => {
     const doc = makeDoc({ withholdingEnabled: true });
     const result = calcDocument(doc.items, SETTINGS_G9);

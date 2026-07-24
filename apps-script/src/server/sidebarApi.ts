@@ -163,6 +163,7 @@ export function exportActiveToPdf(): ExportResult {
   writeSummary(sheet, result);
   SpreadsheetApp.flush();
 
+  // FR-8確定値: ファイル名の金額は**税込合計**（見出し金額=差引請求額とは連動させない。要件書§6-5）
   const fileName = buildPdfFileName(doc.issueDate, doc.clientName, result.total);
   const license = licenseStatus();
   const limit = effectiveLimit();
