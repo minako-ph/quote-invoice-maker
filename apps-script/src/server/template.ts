@@ -22,8 +22,23 @@ const COLS = 6;
 /** クリア対象の行数（前回描画の残骸を確実に消す上限）。 */
 const CLEAR_ROWS = 120;
 
-/** 列幅（px）。旧コンテナ版と同じ配分（A4縦・約700px幅を6列に配分）。 */
-const COLUMN_WIDTHS = [180, 90, 70, 90, 90, 110];
+/** 列幅（px）。A4縦・約700px幅を6列に配分（E=※源泉マーク列は狭く）。 */
+const COLUMN_WIDTHS = [180, 70, 90, 90, 60, 110];
+
+/**
+ * 数値書式（実機PDF目視の磨き込み・2026-07-24）:
+ * '#,##0.###' は整数が「1.」と末尾ピリオド付きで表示されるため使わない。
+ * 数量='#,##0.##'（1→1・1.5→1.5）／単価・金額='#,##0'。
+ */
+const FORMAT_QUANTITY = '#,##0.##';
+const FORMAT_AMOUNT = '#,##0';
+
+/** 注記の折返し行高の見積り（8pt・A:F結合幅を1行約45文字で換算）。 */
+const NOTE_CHARS_PER_LINE = 45;
+function noteRowHeightPx(text: string): number {
+  const lineCount = Math.max(1, Math.ceil(text.length / NOTE_CHARS_PER_LINE));
+  return Math.max(21, 6 + lineCount * 14);
+}
 
 /** 書式用の色（Sheets APIは0..1のRGB）。 */
 const COLOR_HEADER_BG = { red: 0xef / 255, green: 0xef / 255, blue: 0xef / 255 };
@@ -106,9 +121,18 @@ export function buildTemplateRequests(
   const headlineRow = pushRow([headline, yen(headlineAmount)]);
   pushRow(['']);
 
-  // ---- 明細表 ----
-  const tableHeaderRow = pushRow(['品目', '数量', '単価（税抜）', '税率', '', '金額（税抜）']);
+  // ---- 明細表（E列=※源泉マーク。源泉計算ONのとき対象行に印を付ける）----
+  const showWithholdingMark = doc.withholdingEnabled;
+  const tableHeaderRow = pushRow([
+    '品目',
+    '数量',
+    '単価（税抜）',
+    '税率',
+    showWithholdingMark ? '※源泉' : '',
+    '金額（税抜）',
+  ]);
   const has8 = result.lines.some((l) => l.taxCategory === '8');
+  const hasWithholdingLine = showWithholdingMark && result.lines.some((l) => l.withholding);
   let firstItemRow = 0;
   let lastItemRow = 0;
   for (const line of result.lines) {
@@ -118,7 +142,7 @@ export function buildTemplateRequests(
       line.quantity,
       line.unitPrice,
       TAX_CATEGORY_LABELS[line.taxCategory],
-      '',
+      showWithholdingMark && line.withholding ? '※' : '',
       line.amount,
     ]);
     if (firstItemRow === 0) firstItemRow = row;
@@ -174,6 +198,7 @@ export function buildTemplateRequests(
   // ---- 注記（N-1）----
   const notes: string[] = [];
   if (has8) notes.push('※は軽減税率対象品目');
+  if (hasWithholdingLine) notes.push('※源泉＝源泉徴収の対象行');
   notes.push(...result.notes);
   if (doc.remarks !== '') notes.push(`備考: ${doc.remarks}`);
   let notesStart = 0;
@@ -273,20 +298,35 @@ export function buildTemplateRequests(
     },
   });
 
-  // 明細の数値書式（数量・単価=#,##0.###／金額=#,##0）
+  // 明細の数値書式（数量=#,##0.##／単価・金額=#,##0。末尾ピリオド表示の回避）
   if (firstItemRow > 0) {
     requests.push({
       repeatCell: {
-        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 1, 3),
-        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '#,##0.###' } } },
+        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 1, 2),
+        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: FORMAT_QUANTITY } } },
+        fields: 'userEnteredFormat.numberFormat',
+      },
+    });
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 2, 3),
+        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: FORMAT_AMOUNT } } },
         fields: 'userEnteredFormat.numberFormat',
       },
     });
     requests.push({
       repeatCell: {
         range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, COLS - 1, COLS),
-        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '#,##0' } } },
+        cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: FORMAT_AMOUNT } } },
         fields: 'userEnteredFormat.numberFormat',
+      },
+    });
+    // ※源泉マーク列は中央寄せ
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, firstItemRow - 1, lastItemRow, 4, 5),
+        cell: { userEnteredFormat: { horizontalAlignment: 'CENTER' } },
+        fields: 'userEnteredFormat.horizontalAlignment',
       },
     });
   }
@@ -303,7 +343,7 @@ export function buildTemplateRequests(
     },
   });
 
-  // 注記（見出し太字・本文8pt灰色）
+  // 注記（見出し太字・本文8pt灰色。右端切れ対策: 各行をA:F結合＋WRAP＋行高確保）
   if (notesStart > 0) {
     requests.push({
       repeatCell: {
@@ -314,10 +354,26 @@ export function buildTemplateRequests(
     });
     requests.push({
       repeatCell: {
-        range: rangeOf(sheetId, notesStart, lastRow, 0, 1),
-        cell: { userEnteredFormat: { textFormat: { fontSize: 8, foregroundColor: COLOR_NOTE_TEXT } } },
-        fields: 'userEnteredFormat.textFormat(fontSize,foregroundColor)',
+        range: rangeOf(sheetId, notesStart, notesStart + notes.length),
+        cell: {
+          userEnteredFormat: {
+            textFormat: { fontSize: 8, foregroundColor: COLOR_NOTE_TEXT },
+            wrapStrategy: 'WRAP',
+          },
+        },
+        fields: 'userEnteredFormat(textFormat.fontSize,textFormat.foregroundColor,wrapStrategy)',
       },
+    });
+    notes.forEach((note, index) => {
+      const rowIndex = notesStart + index; // 0始まり（注記本文の各行）
+      requests.push({ mergeCells: { range: rangeOf(sheetId, rowIndex, rowIndex + 1), mergeType: 'MERGE_ALL' } });
+      requests.push({
+        updateDimensionProperties: {
+          range: { sheetId, dimension: 'ROWS', startIndex: rowIndex, endIndex: rowIndex + 1 },
+          properties: { pixelSize: noteRowHeightPx(note) },
+          fields: 'pixelSize',
+        },
+      });
     });
   }
 

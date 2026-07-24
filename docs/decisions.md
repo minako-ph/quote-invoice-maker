@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 実機PDF目視の磨き込み: ①数値書式 '#,##0.###' は整数が「1.」表示になるため数量='#,##0.##'・単価/金額='#,##0' へ（許容パターンをテストで固定） ②注記・備考の右端切れ対策=注記各行をA:F結合＋WRAP＋文字数からの行高見積り（rangeが注記全行を含むこともテスト） ③明細E列（空列）は「※源泉」マーク列として意味付け（源泉計算ON時のみヘッダ・対象行に※・脚注表示）
 - 2026-07-24 【実機バグ修正】税率ラベル '10%' はSheetsが数値0.1へ自動変換する（setValue・プルダウン選択とも。右寄せで確認）ため '10%（標準）' へ変更（数値へ自動変換されない文字列に統一）。ラベルはlayout.ts TAX_CATEGORY_LABELSに1箇所集約し、入力規則・サンプル書込・パーサ・F-7エラー文言が同定数を参照。パーサ（taxCategoryOfCellValue）は後方互換で数値0.1/0.08と旧ラベル'10%'/'8%'も受理（既存シート救済）。内部表現('10'|'8'|'none')は不変＝golden・既存テスト無変更で緑
 - 2026-07-24 **V-1確定**（フォールバック(1)採用・チャット側Claude承認済み）: 採用構成=「アプリ（drive.file）作成の帳票作業スプレッドシート（『帳票』直下・IDはUserProperties・先頭シート使用）に Sheets Advanced Service v4 batchUpdate で描画（template.ts buildTemplateRequests 純関数）→ そのファイルの export URL＋OAuthトークンでPDF取得（%PDF検査維持）」。実測根拠: 一次案=コンテナexport URL 404（ブラウザ同一URLは成功）→ FB(1) ①○②×③○④○（openById不可・アプリ作成ファイルへのexport成立）→ probe⑤ ②Sheets batchUpdate成立・③export成立。コンテナ内_帳票シート・show/hideガード・exportRenderedPdfのコンテナ経路は削除。スコープ4点不変（CR-3）
 - 2026-07-24 スクラッチファイル（1ユーザー1つ）の競合防止は既存の LockService.getUserLock()（quota.consumeQuota）内で「スクラッチ確保→Sheets batchUpdate描画→export→Drive保存」の全工程を実行することで担保（新たなロックは追加しない）

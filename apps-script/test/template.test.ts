@@ -134,10 +134,52 @@ describe('buildTemplateRequests（FR-5/6・N-1）', () => {
     expect(values.some((v) => v.includes('10.21%') && v.includes('20.42%'))).toBe(true);
   });
 
-  it('export用rangeは A1:F{最終行} 形式', () => {
+  it('export用rangeは A1:F{最終行} 形式で、注記の全行を含む', () => {
     const doc = makeDoc();
     const result = calcDocument(doc.items, SETTINGS_G9);
-    const { range } = buildTemplateRequests(doc, result, PROFILE_TAXABLE);
+    const { range, requests } = buildTemplateRequests(doc, result, PROFILE_TAXABLE);
     expect(range).toMatch(/^A1:F\d+$/);
+
+    // 値が書き込まれた最終行（注記の末尾行を含む）が range に収まっていること
+    const cells = extractCells([...requests]);
+    const maxRowIndex = Math.max(...cells.map((c) => c.row)); // 0始まり
+    const rangeEndRow = Number(range.split(':F')[1]); // 1始まり
+    expect(rangeEndRow).toBeGreaterThanOrEqual(maxRowIndex + 1);
+    // 注記本文が最終行付近に存在する（右端切れ対策のrange欠落の回帰ガード）
+    const noteCell = cells.find((c) => String(c.value).includes('10.21%'));
+    expect(noteCell).toBeDefined();
+    expect(rangeEndRow).toBeGreaterThanOrEqual((noteCell?.row ?? 0) + 1);
+  });
+
+  it('数値書式パターンは末尾ピリオド表示を起こさない（#,##0 / #,##0.## のみ）', () => {
+    const doc = makeDoc();
+    const result = calcDocument(doc.items, SETTINGS_G9);
+    const { requests } = buildTemplateRequests(doc, result, PROFILE_TAXABLE);
+    const patterns: string[] = [];
+    for (const request of requests) {
+      const pattern = request.repeatCell?.cell?.userEnteredFormat?.numberFormat?.pattern;
+      if (typeof pattern === 'string') patterns.push(pattern);
+    }
+    expect(patterns.length).toBeGreaterThan(0);
+    for (const pattern of patterns) {
+      expect(pattern.endsWith('.')).toBe(false);
+      // 「1.」表示を起こす '#,##0.###' 型（#のみの小数部3桁）を禁止し、許容セットに限定
+      expect(['#,##0', '#,##0.##']).toContain(pattern);
+    }
+  });
+
+  it('源泉ONでは※源泉列ヘッダと対象行マーク・脚注が出る', () => {
+    const doc = makeDoc({ withholdingEnabled: true });
+    const result = calcDocument(doc.items, SETTINGS_G9);
+    const values = stringValues(extractCells([...buildTemplateRequests(doc, result, PROFILE_TAXABLE).requests]));
+    expect(values).toContain('※源泉');
+    expect(values).toContain('※源泉＝源泉徴収の対象行');
+
+    const docOff = makeDoc({ withholdingEnabled: false });
+    const resultOff = calcDocument(docOff.items, { ...SETTINGS_G9, withholdingEnabled: false });
+    const valuesOff = stringValues(
+      extractCells([...buildTemplateRequests(docOff, resultOff, PROFILE_TAXABLE).requests]),
+    );
+    expect(valuesOff).not.toContain('※源泉');
   });
 });
