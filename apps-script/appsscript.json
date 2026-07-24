@@ -8,7 +8,11 @@
     "https://www.googleapis.com/auth/script.container.ui",
     "https://www.googleapis.com/auth/drive.file"
   ],
-  "urlFetchWhitelist": ["https://docs.google.com/", "https://www.googleapis.com/"],
+  "urlFetchWhitelist": [
+    "https://docs.google.com/",
+    "https://www.googleapis.com/",
+    "https://sheets.googleapis.com/"
+  ],
   "dependencies": {
     "enabledAdvancedServices": [
       {

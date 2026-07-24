@@ -181,6 +181,134 @@ export function probeExportPdfFallback1(): string {
 }
 
 /**
+ * 決定木(2)の検討用 probe⑤（フォールバック(1)の実測が ①○②×③○④○ だったことを受けて）:
+ * ②SpreadsheetApp.openById がアプリ作成ファイルに対して不成立だったため、
+ * 帳票描画を **Sheets REST API（batchUpdate・Bearer=drive.fileトークン）** で行えるかを検証する。
+ *
+ * 1回の実行で:
+ *   ① Drive API（drive.file）で新規スプレッドシート「_v1probe5_帳票」を作成
+ *   ② Sheets REST batchUpdate で「値＋書式（太字/罫線/セル結合/列幅）」を書込 → HTTPコード表示
+ *   ③ 既存 buildExportUrl で export → HTTPコード＋%PDF判定
+ * ②③とも成立なら「帳票描画=Sheets REST・export=③の経路」で本実装を組める
+ * （スコープは4点から増やさない。sheets.googleapis.com の urlFetchWhitelist 追加はスコープ変更ではない）。
+ * 生成した「_v1probe5_帳票」は目視確認後に手で削除してよい。
+ */
+export function probeSheetsApiWrite(): string {
+  const lines: string[] = ['=== 決定木(2)検討 probeSheetsApiWrite（Sheets REST書込→export） ==='];
+  const token = ScriptApp.getOAuthToken();
+
+  // ① アプリ作成ファイル
+  let fileId = '';
+  try {
+    const created = Drive.Files.create({
+      name: '_v1probe5_帳票',
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+    });
+    if (created.id === undefined) throw new Error('Drive APIがIDを返しませんでした');
+    fileId = created.id;
+    lines.push(`① 新規スプレッドシート作成: OK (id=${fileId})`);
+  } catch (e) {
+    lines.push(`① 新規スプレッドシート作成: 失敗 — ${e instanceof Error ? e.message : String(e)}`);
+    const report = lines.join('\n');
+    Logger.log(report);
+    return report;
+  }
+
+  // ② Sheets REST batchUpdate: 値＋太字＋罫線＋セル結合＋列幅（帳票描画に必要な操作の代表4種）
+  try {
+    const batchUpdate = {
+      requests: [
+        {
+          updateCells: {
+            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3 },
+            fields: 'userEnteredValue,userEnteredFormat.textFormat.bold',
+            rows: [
+              {
+                values: [
+                  { userEnteredValue: { stringValue: '請求書（probe⑤）' }, userEnteredFormat: { textFormat: { bold: true } } },
+                  { userEnteredValue: { numberValue: 12345 } },
+                  { userEnteredValue: { stringValue: '¥45,678' } },
+                ],
+              },
+              {
+                values: [
+                  { userEnteredValue: { stringValue: '品目A' } },
+                  { userEnteredValue: { numberValue: 2 } },
+                  { userEnteredValue: { stringValue: 'OK' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          updateBorders: {
+            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3 },
+            top: { style: 'SOLID' },
+            bottom: { style: 'SOLID' },
+            left: { style: 'SOLID' },
+            right: { style: 'SOLID' },
+            innerHorizontal: { style: 'SOLID' },
+            innerVertical: { style: 'SOLID' },
+          },
+        },
+        {
+          mergeCells: {
+            range: { sheetId: 0, startRowIndex: 3, endRowIndex: 4, startColumnIndex: 0, endColumnIndex: 3 },
+            mergeType: 'MERGE_ALL',
+          },
+        },
+        {
+          updateDimensionProperties: {
+            range: { sheetId: 0, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 },
+            properties: { pixelSize: 180 },
+            fields: 'pixelSize',
+          },
+        },
+      ],
+    };
+    const response = UrlFetchApp.fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}:batchUpdate`,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(batchUpdate),
+        headers: { Authorization: `Bearer ${token}` },
+        muteHttpExceptions: true,
+      },
+    );
+    const code = response.getResponseCode();
+    lines.push(`② Sheets REST batchUpdate（値+太字+罫線+結合+列幅）: HTTP ${code}`);
+    if (code !== 200) {
+      lines.push(`   本文先頭200文字: ${response.getContentText().slice(0, 200)}`);
+    }
+  } catch (e) {
+    lines.push(`② Sheets REST batchUpdate: 例外 — ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // ③ 既存 export URL 経路（フォールバック(1)③で成立実績あり）
+  try {
+    const url = buildExportUrl(fileId, 0, 'A1:C5');
+    const response = UrlFetchApp.fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true,
+    });
+    const code = response.getResponseCode();
+    const pdfOk = code === 200 && isPdfBytes(response.getContent());
+    lines.push(`③ export URL: HTTP ${code} ／ %PDF: ${pdfOk ? 'OK' : 'NG'}`);
+  } catch (e) {
+    lines.push(`③ export URL: 例外 — ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  lines.push('');
+  lines.push('判定: ②③とも成立 → 「帳票描画=Sheets REST batchUpdate・export=既存URL」で本実装を組める');
+  lines.push('（PDFを開いて太字・罫線・結合・列幅が反映されているかも目視確認するとより確実）');
+  lines.push('生成物「_v1probe5_帳票」は目視確認後に削除してよい');
+  const report = lines.join('\n');
+  Logger.log(report);
+  return report;
+}
+
+/**
  * V-2: Advanced Drive Service（Drive v3・drive.file）で
  * フォルダ作成 → 小さなPDF Blobのアップロード → 取得（生存確認）を行う。
  * 生成物は「_v2probe_帳票」フォルダに残す（人間がDriveで目視確認後、手で削除してよい）。

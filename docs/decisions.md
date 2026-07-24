@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 【実測】V-1フォールバック(1): ①アプリ作成ファイル生成○ ②SpreadsheetApp.openById×（drive.fileではSpreadsheetAppから開けない） ③アプリ作成ファイルへのexport URL○（%PDF OK） ④Drive REST export○ → exportの経路は確保。帳票描画手段が課題のためprobe⑤（Sheets REST書込）で決定木(2)を検討
+- 2026-07-24 決定木(2)検討用 probe⑤を追加: probeSheetsApiWrite()（(dev)メニュー「V-1 probe⑤ Sheets REST書込」）＝アプリ作成ファイルへSheets REST batchUpdate（値+太字+罫線+結合+列幅・Bearer=drive.fileトークン）→既存export URLで%PDF判定。このため urlFetchWhitelist に https://sheets.googleapis.com/ を追加（**スコープ変更ではない**・oauthScopes4点不変）。②③成立なら「帳票描画=Sheets REST・export=既存URL」で本実装を組む
 - 2026-07-24 【実測】V-2成立: Drive v3 Advanced Service（drive.file）でフォルダ作成・PDFアップロード・取得確認（trashed含むfields取得）すべてOK（エディタ実行）→ FR-8はAdvanced Drive方式で確定
 - 2026-07-24 【実測】V-1一次案は不成立: コンテナ自身のexport URLがHTTP 404（テストシート・アドオンメニュー実行）。**ブラウザで同一URLを開くとPDF取得成功**のため、4スコープ構成のOAuthトークンの認可起因と判定 → 決定木フォールバック(1)の検証へ
 - 2026-07-24 V-1決定木(1)の検証probeを追加: probeExportPdfFallback1()（(dev)メニュー「V-1フォールバック(1)スパイク」）で①drive.fileで新規スプレッドシート作成→②SpreadsheetApp.openById→③export URL→④Drive REST exportを1回で検証。④のためurlFetchWhitelistに https://www.googleapis.com/ を追加（**スコープ変更ではない**・oauthScopes4点は不変）。②成立なら帳票描画をアプリ作成ファイル側で行う設計でレイアウトコード無変更のまま解決、②不成立なら停止して人間判断（決定木(2)）
