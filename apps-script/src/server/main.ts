@@ -24,11 +24,19 @@ import { probeDrive, probeExportPdf } from './spike';
 import type { LicenseStatus } from './license';
 import type { IssuerProfile, ProfileValidation } from './profile';
 
-/** アドオンメニュー（エディタアドオンのonOpen）。 */
+/**
+ * アドオンメニュー（エディタアドオンのonOpen）。
+ * (dev) 項目はV-1/V-2スパイク用の一時メニュー——standaloneエディタ実行では
+ * SpreadsheetApp.getActiveSpreadsheet() が null になり本番フロー（_帳票描画→export）に
+ * 入れないため、テストシート上のメニューから実行する。**スパイク成立後に削除する**（decisions.md TODO）。
+ */
 export function onOpen(): void {
   SpreadsheetApp.getUi()
     .createAddonMenu()
     .addItem('サイドバーを開く', 'showSidebar')
+    .addSeparator()
+    .addItem('(dev) V-1スパイク', 'devRunExportPdfProbe')
+    .addItem('(dev) V-2スパイク', 'devRunDriveProbe')
     .addToUi();
 }
 
@@ -95,7 +103,18 @@ export function createSample(): { sheetName: string } {
   return newSample();
 }
 
-// ---- V-1/V-2 スパイク（人間がスクリプトエディタから実行。§12-3）----
+// ---- V-1/V-2 スパイク（§12-3）----
+// devRun* はテストシートのアドオンメニューから実行し、結果全文を alert で表示する
+// （改行そのまま。スプレッドシートのUIコンテキストで動くため getActiveSpreadsheet が有効）。
+// exportPdfProbe/driveProbe はエディタ実行用に残す（V-2はエディタ実行で成立済み）。
+
+export function devRunExportPdfProbe(): void {
+  SpreadsheetApp.getUi().alert(probeExportPdf());
+}
+
+export function devRunDriveProbe(): void {
+  SpreadsheetApp.getUi().alert(probeDrive());
+}
 
 export function exportPdfProbe(): string {
   return probeExportPdf();

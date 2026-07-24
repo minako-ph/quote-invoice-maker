@@ -33,7 +33,9 @@ const ENTRY_POINTS = [
   'getProfile',
   'saveProfile',
   'createSample',
-  // V-1/V-2 スパイク（スクリプトエディタから人間が実行。§12-3）
+  // V-1/V-2 スパイク（§12-3。devRun*はテストシートのアドオンメニューから・素のprobeはエディタから）
+  'devRunExportPdfProbe',
+  'devRunDriveProbe',
   'exportPdfProbe',
   'driveProbe',
 ];
