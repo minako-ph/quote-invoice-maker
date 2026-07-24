@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 運営者表記を屋号pelmoalabsへ統一（web/全6ページ©・特商法・PP。コード無変更）: 氏名は特定商取引法の請求開示方式（消費者庁 通信販売広告Q&A A15。氏名（名称）・住所・電話番号は請求があれば遅滞なく開示することで表示省略可）により非表示化。**開示請求受領時はメール（chanmina143@gmail.com）で遅滞なく氏名を開示する運用義務が残る**。価格・支払方法・解約条件など取引条件の記載は省略せず現状維持
 - 2026-07-24 LPデザイン刷新: Open Designプロジェクト`quote-invoice-maker-lp`で作成したデザインをweb/index.htmlへ反映（構成はmarketing §6のまま・verbatim文言/正直明記3点/料金/FAQ5問は無変更。審査プリフライトのtitle短縮・h1直下説明文・運営者名=山本美奈子・相対パスは維持）。ヒーローに見積書→請求書のCSSライブデモを配置しデモGIF枠を兼ねる（実写GIFへの差替TODOは継続）。Google Fonts外部読み込み（fonts.googleapis.com）を追加＝LPページのみの依存でアドオン本体の外部送信ゼロとは無関係
 - 2026-07-24 審査プリフライト＋運営者情報＋サブディレクトリ方式（web/とdocsのみ・コード無変更）: ①index.htmlの<title>をアプリ名のみに短縮（柱3実指摘の横展開。SEOサブタイトル「for Google Sheets — 源泉税計算・インボイス対応」は**審査通過後に復帰するTODO**）＋h1直下にアプリ名と目的説明文 ②privacy.htmlに「データ保護のための措置」節とGoogle APIサービスLimited Use準拠開示を追加 ③運営者情報を実記入（運営者=山本美奈子・連絡先=chanmina143@gmail.com・所在地=請求開示・合意管轄=東京地裁・最終更新日=2026-07-24→公開時に公開日へ更新）。web/のTODO残はデモGIFとBACKEND_URLのみ ④公開URLをサブディレクトリ方式 https://pelmoalabs.com/quote-invoice-maker/ に確定（web/CNAME作成禁止・全リンク相対パス・Worker ROUTESの解除確認は人間タスク）。domain-pages/gcp-oauth/backend README/scope-justificationのURL記載を同方式に統一（handover §5のサブドメイン第一候補からの変更）
 - 2026-07-12 R-3: N-7充足 — READMEに「運用・保守」節を追加（税制の年次点検=年1回＋大改正報道時、公開後の週次監視、問い合わせ一次返信48時間SLA）
