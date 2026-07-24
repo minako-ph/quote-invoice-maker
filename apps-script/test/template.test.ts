@@ -192,6 +192,30 @@ describe('buildTemplateRequests（FR-5/6・N-1）', () => {
     expect(widthOff).toBe(12);
   });
 
+  it('見出し額: 請求書+源泉ON=差引請求額＋内訳補助行／見積書=税込合計のまま（仕様確定2026-07-24）', () => {
+    // 請求書+源泉ON: 「ご請求金額」= amountDue（G-9: ¥99,790）＋補助行に税込合計と源泉税
+    const invoice = makeDoc({ type: 'invoice', withholdingEnabled: true });
+    const invoiceResult = calcDocument(invoice.items, SETTINGS_G9);
+    const invoiceCells = extractCells([...buildTemplateRequests(invoice, invoiceResult, PROFILE_TAXABLE).requests]);
+    const invoiceHeadline = invoiceCells.find((c) => c.value === 'ご請求金額');
+    expect(invoiceHeadline).toBeDefined();
+    const invoiceAmount = invoiceCells.find((c) => c.row === invoiceHeadline?.row && c.col === 1)?.value;
+    expect(invoiceAmount).toBe('¥99,790'); // amountDue
+    expect(
+      stringValues(invoiceCells).some((v) => v.includes('税込合計 ¥110,000') && v.includes('源泉徴収税額 ▲¥10,210')),
+    ).toBe(true);
+
+    // 見積書+源泉ON: 「お見積金額」= total のまま（源泉は支払時処理）・補助行なし
+    const quote = makeDoc({ type: 'quote', withholdingEnabled: true });
+    const quoteResult = calcDocument(quote.items, SETTINGS_G9);
+    const quoteCells = extractCells([...buildTemplateRequests(quote, quoteResult, PROFILE_TAXABLE).requests]);
+    const quoteHeadline = quoteCells.find((c) => c.value === 'お見積金額');
+    expect(quoteHeadline).toBeDefined();
+    const quoteAmount = quoteCells.find((c) => c.row === quoteHeadline?.row && c.col === 1)?.value;
+    expect(quoteAmount).toBe('¥110,000'); // total
+    expect(stringValues(quoteCells).some((v) => v.includes('税込合計 ¥110,000 ／'))).toBe(false);
+  });
+
   it('源泉ONでは※源泉列ヘッダと対象行マーク・脚注が出る', () => {
     const doc = makeDoc({ withholdingEnabled: true });
     const result = calcDocument(doc.items, SETTINGS_G9);

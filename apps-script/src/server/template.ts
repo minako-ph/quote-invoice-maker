@@ -118,10 +118,18 @@ export function buildTemplateRequests(
   pushRow([doc.dueOrExpiry !== '' ? `${dueLabel}: ${doc.dueOrExpiry}` : '']);
   pushRow(['']);
 
-  // ---- 金額サマリ（請求書=差引請求額・見積書=税込合計）----
+  // ---- 金額サマリ（仕様確定・2026-07-24: 請求書=差引請求額・見積書=税込合計のまま）----
+  // 源泉ONの請求書は「ご請求金額」=差引請求額とし、直下に税込合計・源泉税の内訳を小さく補助表示する。
+  // 見積書は源泉ONでも「お見積金額」=税込合計（源泉徴収は支払時処理のため）。
   const headline = doc.type === 'invoice' ? 'ご請求金額' : 'お見積金額';
   const headlineAmount = doc.type === 'invoice' ? result.amountDue : result.total;
   const headlineRow = pushRow([headline, yen(headlineAmount)]);
+  let headlineSubRow = 0;
+  if (doc.type === 'invoice' && doc.withholdingEnabled && result.withholdingTax > 0) {
+    headlineSubRow = pushRow([
+      `（税込合計 ${yen(result.total)} ／ 源泉徴収税額 ▲${yen(result.withholdingTax)}）`,
+    ]);
+  }
   pushRow(['']);
 
   // ---- 明細表（E列=※源泉マーク。源泉計算ONのとき対象行に印を付ける）----
@@ -279,6 +287,19 @@ export function buildTemplateRequests(
       bottom: { style: 'SOLID' },
     },
   });
+  // 補助行（税込合計・源泉税の内訳。小さく灰色・A:F結合）
+  if (headlineSubRow > 0) {
+    requests.push({
+      mergeCells: { range: rangeOf(sheetId, headlineSubRow - 1, headlineSubRow), mergeType: 'MERGE_ALL' },
+    });
+    requests.push({
+      repeatCell: {
+        range: rangeOf(sheetId, headlineSubRow - 1, headlineSubRow),
+        cell: { userEnteredFormat: { textFormat: { fontSize: 9, foregroundColor: COLOR_NOTE_TEXT } } },
+        fields: 'userEnteredFormat.textFormat(fontSize,foregroundColor)',
+      },
+    });
+  }
 
   // 明細ヘッダ（太字・背景・罫線）
   requests.push({
