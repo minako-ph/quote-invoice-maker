@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 審査プリフライト＋運営者情報＋サブディレクトリ方式（web/とdocsのみ・コード無変更）: ①index.htmlの<title>をアプリ名のみに短縮（柱3実指摘の横展開。SEOサブタイトル「for Google Sheets — 源泉税計算・インボイス対応」は**審査通過後に復帰するTODO**）＋h1直下にアプリ名と目的説明文 ②privacy.htmlに「データ保護のための措置」節とGoogle APIサービスLimited Use準拠開示を追加 ③運営者情報を実記入（運営者=山本美奈子・連絡先=chanmina143@gmail.com・所在地=請求開示・合意管轄=東京地裁・最終更新日=2026-07-24→公開時に公開日へ更新）。web/のTODO残はデモGIFとBACKEND_URLのみ ④公開URLをサブディレクトリ方式 https://pelmoalabs.com/quote-invoice-maker/ に確定（web/CNAME作成禁止・全リンク相対パス・Worker ROUTESの解除確認は人間タスク）。domain-pages/gcp-oauth/backend README/scope-justificationのURL記載を同方式に統一（handover §5のサブドメイン第一候補からの変更）
 - 2026-07-12 R-3: N-7充足 — READMEに「運用・保守」節を追加（税制の年次点検=年1回＋大改正報道時、公開後の週次監視、問い合わせ一次返信48時間SLA）
 - 2026-07-11 第三者レビュー承認済み（F-1〜F-7適用をチャット側Claudeがclone再検証・108テスト緑・golden/verbatim無変更を確認）
 - 2026-07-11 F-5: 適格（taxable=true）は登録番号必須に強化（validateProfile＋export時ガード＋プロファイル未設定時のexport拒否）。§6-3①を構造で担保。ユーザーゼロのため後方互換考慮なし

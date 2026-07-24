@@ -52,7 +52,9 @@ openssl pkey -in license-signing-key.pem -pubout
 1. **Product/Price**: 既存の Stripe アカウントに新 Product「見積書・請求書メーカー Pro」を作成し、
    月額 **¥1,480（税込単価として設定）** の recurring Price を作る。
    特商法表記・Marketplaceリスティングと**同一文言**にする（三者不一致は審査差し戻しの典型。引継書§8）。
-2. **Payment Link / Checkout**: 成功URLは `https://<ドメイン>/thanks.html?session_id={CHECKOUT_SESSION_ID}`。
+2. **Payment Link / Checkout**: 成功URLは
+   `https://pelmoalabs.com/quote-invoice-maker/thanks.html?session_id={CHECKOUT_SESSION_ID}`
+   （サブディレクトリ方式＝docs/setup/domain-pages.md）。
 3. **カスタマーポータル**: 解約導線として有効化（解約後も当該課金期間の満了までProを利用できる設定と
    特商法表記を一致させる）。
 4. **Webhook**: エンドポイント `https://<Cloud Run URL>/stripe/webhook`、イベントは

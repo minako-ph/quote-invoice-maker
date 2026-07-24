@@ -6,9 +6,9 @@
 ## 前提
 
 - Googleアカウント: 公開に使うアカウント（柱3と同一アカウント推奨）で実施。
-- 独自ドメイン（柱3ドメインのサブドメイン共用が第一候補・引継書§5）と LP/PP/ToS の公開
-  （docs/setup/domain-pages.md）が**ブランド確認の前提**。ドメイン確定前でも
-  プロジェクト作成〜テストモードまでは進められる。
+- 公開URLは柱3ドメインの**サブディレクトリ方式**で確定:
+  `https://pelmoalabs.com/quote-invoice-maker/`（docs/setup/domain-pages.md）。
+  LP/PP/ToS の公開が**ブランド確認の前提**。
 
 ## 1. GCPプロジェクト作成
 
@@ -24,12 +24,12 @@
   - アプリ名: `見積書・請求書メーカー`（Marketplace掲載名と整合。marketing §5 が正）
   - ユーザーサポートメール: 運用アカウントのメール
   - デベロッパー連絡先: 同上
-- [ ] アプリドメイン（ドメイン確定後に追記可）:
-  - ホームページ: `https://<サブドメイン>/`
-  - プライバシーポリシー: `https://<サブドメイン>/privacy.html`
-  - 利用規約: `https://<サブドメイン>/terms.html`
-- [ ] 承認済みドメインに独自ドメイン（apex）を追加（**Search Consoleでの所有権確認が先に必要**。
-      ドメインプロパティ（DNS確認）はサブドメインを包含する＝引継書§5）
+- [ ] アプリドメイン:
+  - ホームページ: `https://pelmoalabs.com/quote-invoice-maker/`
+  - プライバシーポリシー: `https://pelmoalabs.com/quote-invoice-maker/privacy.html`
+  - 利用規約: `https://pelmoalabs.com/quote-invoice-maker/terms.html`
+- [ ] 承認済みドメインに `pelmoalabs.com` を追加（**Search Consoleでの所有権確認が前提**。
+      柱3のドメインプロパティ（DNS確認）が済んでいればサブディレクトリは当然に包含される）
 - [ ] 公開ステータス: **テスト中（Testing）** のまま。テストユーザーに自分のアカウントを追加
 
 ## 3. スコープ宣言（CR-3: この4点以外を絶対に追加しない）

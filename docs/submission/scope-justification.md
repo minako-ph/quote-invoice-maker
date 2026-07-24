@@ -50,6 +50,6 @@ English: This editor add-on lets freelancers and sole proprietors create quotes 
 ## 提出時チェックリスト（人間タスク）
 
 - [ ] OAuth同意画面のスコープ宣言が上記4点のみと一致している（`docs/setup/gcp-oauth.md §3`）
-- [ ] PP公開URL（`https://<サブドメイン>/privacy.html`）のスコープ表と本理由書の文言が一致している
+- [ ] PP公開URL（`https://pelmoalabs.com/quote-invoice-maker/privacy.html`）のスコープ表と本理由書の文言が一致している
 - [ ] デモ動画（`docs/submission/demo-video-script.md`）で4スコープすべての実使用シーンが映っている
 - [ ] 提出前に本ドラフトをフォームの文字数制限に合わせて要約する（各スコープ数百字程度が目安）
