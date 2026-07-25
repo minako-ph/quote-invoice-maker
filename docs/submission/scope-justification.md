@@ -3,7 +3,9 @@
 対象: 「見積書・請求書メーカー for Google Sheets」（quote-invoice-maker）
 スコープは **CR-3 の4点固定**（`docs/setup/gcp-oauth.md §3`・CIで差分ガード済み）。
 文言は `web/privacy.html` のスコープ表と整合させてある（審査時はPP・本理由書・実挙動の三者一致が重要）。
-提出フォームへは日本語欄が無い場合に備え英語訳を併記する。**restrictedスコープは使用しない**（CASA非対象）。
+提出フォームへは日本語欄が無い場合に備え英語訳を併記する。**restricted（制限付き）スコープは使用しない**（CASA非対象）。
+
+**スコープ区分はGCPコンソールの実測（2026-07-25）**: 非機密=spreadsheets.currentonly・drive.file／機密（sensitive審査対象）=script.external_request・script.container.ui／制限付き=なし（コンソールで「表示する行がありません」を目視確認済み）。
 
 ## アプリ概要（フォームの App functionality 欄）
 
@@ -13,28 +15,28 @@ English: This editor add-on lets freelancers and sole proprietors create quotes 
 
 ## スコープ別の用途と最小性
 
-### 1. `https://www.googleapis.com/auth/spreadsheets.currentonly`（sensitive）
+### 1. `https://www.googleapis.com/auth/spreadsheets.currentonly`（非機密＝コンソール実測）
 
 - **用途（PP整合）**: お客様が開いているスプレッドシートに入力シート・帳票・台帳を作成し読み書きするため。他のスプレッドシートにはアクセスしません。
 - **具体的機能**: 書類入力シートの生成（FR-1）、見積→請求変換（FR-2）、計算結果・根拠注記の書き込み（FR-3/4）、帳票シートへの差し込み（FR-5/6）、出力台帳への追記（FR-12）。
 - **最小性**: 全ファイル対象の `spreadsheets` ではなく、**現在開いているスプレッドシートのみ**にアクセスできる currentonly を採用。アドオンの機能は利用者が開いている1ファイルの中で完結するため、これで十分である。
 - English: Used to create and update the document-input sheets, the print template sheet, and the output ledger **in the spreadsheet currently open by the user**. We deliberately chose `spreadsheets.currentonly` instead of the broader `spreadsheets` scope because the add-on never needs to access any other spreadsheet.
 
-### 2. `https://www.googleapis.com/auth/script.external_request`（sensitive）
+### 2. `https://www.googleapis.com/auth/script.external_request`（機密＝sensitive審査対象・コンソール実測）
 
 - **用途（PP整合）**: PDF生成（GoogleのエクスポートAPI）とライセンス検証（送信先を固定）のため。
 - **具体的機能**: ①帳票シートをA4 PDF化するため、Google自身のスプレッドシートexportエンドポイント（`https://docs.google.com/`）を利用者自身のOAuthトークンで呼び出す（FR-7）。②有料プランのライセンスキー検証のため、運営のライセンスサーバへ**キー文字列のみ**を送信する（FR-10）。
 - **最小性**: manifest の `urlFetchWhitelist` で送信先を上記2ドメインに固定している。スプレッドシートの内容（明細・取引先名・金額）はいかなる外部にも送信しない（無料利用の範囲では外部送信ゼロ）。
 - English: Used only for (1) calling Google's own spreadsheet PDF export endpoint (`https://docs.google.com/`) with the user's own OAuth token, and (2) sending **only the license key string** to our license server for paid-plan verification. Destinations are pinned via `urlFetchWhitelist`. Spreadsheet contents are never transmitted.
 
-### 3. `https://www.googleapis.com/auth/script.container.ui`（非sensitive）
+### 3. `https://www.googleapis.com/auth/script.container.ui`（機密＝sensitive審査対象・コンソール実測）
 
 - **用途（PP整合）**: 操作用のサイドバーUIを表示するため。
 - **具体的機能**: 書類作成・再計算・PDF出力などの操作と、使用量・ライセンス状態・ヘルプの表示を行うサイドバー（FR-9/14ほか）。
 - **最小性**: エディタアドオンのUI表示に必要な標準スコープであり、これ以外のUI手段はない。
 - English: Required to show the add-on's sidebar UI (the only user interface of the add-on).
 
-### 4. `https://www.googleapis.com/auth/drive.file`（sensitive・非restricted）
+### 4. `https://www.googleapis.com/auth/drive.file`（非機密・非restricted＝コンソール実測）
 
 - **用途（PP整合）**: 生成したPDFを保存するフォルダ（「帳票」）の作成と、PDFファイルの保存のため。**本アドオンが作成したファイル・フォルダ以外にはアクセスできない権限です。**
 - **具体的機能**: 保存フォルダ「帳票」（配下に「請求書」「見積書」）の作成と、生成PDFの保存・同名衝突チェック（FR-8）。
