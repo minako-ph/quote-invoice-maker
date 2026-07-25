@@ -31,6 +31,14 @@ function scratchAlive(fileId: string): boolean {
 }
 
 /**
+ * 保存済みのスクラッチIDを破棄する（描画失敗時のリトライ用。
+ * 次回の ensureScratchSpreadsheet() が新規作成する）。
+ */
+export function discardScratchSpreadsheet(): void {
+  PropertiesService.getUserProperties().deleteProperty(SCRATCH_PROP_KEY);
+}
+
+/**
  * 帳票作業ファイルを確保して ID を返す（無ければ「帳票」フォルダ直下に作成）。
  */
 export function ensureScratchSpreadsheet(): string {

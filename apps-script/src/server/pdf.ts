@@ -7,7 +7,7 @@
  * （FB(1)実測 ①○②×③○④○・probe⑤ ②③成立）。スコープは4点のまま（CR-3）。
  */
 
-import { ensureScratchSpreadsheet, SCRATCH_SHEET_ID } from './scratch';
+import { discardScratchSpreadsheet, ensureScratchSpreadsheet, SCRATCH_SHEET_ID } from './scratch';
 import { buildTemplateRequests } from './template';
 import type { CalcResult } from './calc';
 import type { IssuerProfile } from './profile';
@@ -82,11 +82,28 @@ export function exportDocumentPdf(
   fileName: string,
 ): GoogleAppsScript.Base.Blob {
   const { requests, range } = buildTemplateRequests(doc, result, profile, SCRATCH_SHEET_ID);
-  const scratchId = ensureScratchSpreadsheet();
   const spreadsheets = Sheets.Spreadsheets;
   if (spreadsheets === undefined) {
     throw new Error('Sheets Advanced Service が利用できません（appsscript.json の enabledAdvancedServices を確認）');
   }
-  spreadsheets.batchUpdate({ requests: [...requests] }, scratchId);
+
+  // 描画。失敗時（利用者がスクラッチ内のシートを削除して sheetId=0 が消えた等）は
+  // スクラッチIDを破棄→再作成して**1回だけ**リトライする（新規ファイルの先頭シートは必ず sheetId=0）。
+  let scratchId = ensureScratchSpreadsheet();
+  try {
+    spreadsheets.batchUpdate({ requests: [...requests] }, scratchId);
+  } catch (first) {
+    discardScratchSpreadsheet();
+    scratchId = ensureScratchSpreadsheet();
+    try {
+      spreadsheets.batchUpdate({ requests: [...requests] }, scratchId);
+    } catch (second) {
+      const reason = second instanceof Error ? second.message : String(second);
+      throw new Error(
+        `帳票の描画に失敗しました（作業ファイルを再作成しても失敗: ${reason}）。` +
+          '時間をおいて再度お試しください。繰り返し失敗する場合はサポートへご連絡ください。',
+      );
+    }
+  }
   return fetchPdfBlob(scratchId, SCRATCH_SHEET_ID, range, fileName);
 }

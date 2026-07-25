@@ -33,16 +33,6 @@ const ENTRY_POINTS = [
   'getProfile',
   'saveProfile',
   'createSample',
-  // V-1/V-2 スパイク（§12-3。devRun*はテストシートのアドオンメニューから・素のprobeはエディタから）
-  'devRunExportPdfProbe',
-  'devRunExportPdfFallback1',
-  'devRunSheetsApiWrite',
-  'devRunDriveProbe',
-  'devResetUsage',
-  'exportPdfProbe',
-  'exportPdfFallback1Probe',
-  'sheetsApiWriteProbe',
-  'driveProbe',
 ];
 
 // バンドルされた module の export を参照するトップレベル関数スタブ。

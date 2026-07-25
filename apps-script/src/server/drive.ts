@@ -3,8 +3,8 @@
  *
  * DriveApp は使わない（フルdriveスコープを要求しがち）。**Advanced Drive Service（Drive API v3・
  * manifest の userSymbol "Drive"）**でフォルダ作成とPDFアップロードを行う。
- * drive.file スコープは「アプリが作成したファイル/フォルダ」に読み書き可——この前提は
- * V-2 スパイク（spike.ts driveProbe）で実機確認してから本接続する（引継書§8）。
+ * drive.file スコープは「アプリが作成したファイル/フォルダ」に読み書き可——
+ * V-2実測で確定済み（2026-07-24・decisions.md）。
  *
  * フォルダIDは DocumentProperties に保持し、消えていたら再作成する。
  */

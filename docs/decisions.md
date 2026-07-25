@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-25 版指定デプロイ前クリーンアップ: (dev)メニュー・probe群（spike.ts・devRun系・devResetUsage・エディタ用probe）を全削除しENTRY_POINTS/footer整合（既存TODO消化）。urlFetchWhitelistを https://docs.google.com/ のみに縮小（www.googleapis.com はprobe④専用だった）。scratch堅牢化=batchUpdate失敗時（sheetId=0消失等）はスクラッチID破棄→再作成→1回だけリトライ・それでも失敗なら原因つきエラー。demo-video-script.mdをシーン0〜4構成（スコープ実測区分対応表・権限リセット手順・ダミープロファイル注意・日英字幕）へ全面更新
 - 2026-07-25 ブランド確認の実測指摘2件対応（web/index.htmlのみ・柱3初回と同一パターン）: ①h1をOAuth同意画面のアプリ名と完全一致「見積書・請求書メーカー」（プレーン表記）へ入替・キャッチコピーはh1直下のpへ降格・目的説明文の文頭かぎ括弧を除去（機械照合対策） ②meta descriptionをアプリ名主語の目的説明文へ差し替え。柱3がh1+title両方一致の構成で通過した実績に完全整合。CR-4禁止表現なし・相対パス維持
 - 2026-07-25 【実測】GCPコンソールのスコープ区分: 非機密=spreadsheets.currentonly・drive.file／機密（sensitive審査対象）=script.external_request・script.container.ui／制限付き=なし（「表示する行がありません」目視確認）。scope-justification.md の想定区分（currentonly/drive.file=sensitive等）を実測で置換。CASA非発生の前提は不変
 - 2026-07-25 源泉ON見出し仕様は**事業主承認済み**として確定（2026-07-24実装分のとおり）。あわせて**FR-8のファイル名の金額は税込合計のまま変更しない**ことを確定（要件確定値。見出し金額=差引請求額とは連動させない。sidebarApiにコメントで固定・源泉OFF両書類=total/補助行なしのテストを追加）

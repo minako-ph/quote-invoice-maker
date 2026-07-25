@@ -13,7 +13,7 @@ import { effectiveLimit, licenseStatus, removeLicenseKey, storeLicenseKey, type 
 import { buildPdfFileName } from './naming';
 import { exportDocumentPdf } from './pdf';
 import { isProfileConfigured, loadProfile, storeProfile, type IssuerProfile, type ProfileValidation } from './profile';
-import { FREE_MONTHLY_LIMIT, clearUsageForDev, consumeQuota, readUsage, remainingOf, type Usage } from './quota';
+import { FREE_MONTHLY_LIMIT, consumeQuota, readUsage, remainingOf, type Usage } from './quota';
 import { activeInputSheet, convertQuoteToInvoice, createInputSheet, readDocument, writeSummary, type DocumentData } from './sheets';
 import { createSampleQuote } from './sample';
 import type { DocumentType } from './layout';
@@ -214,16 +214,4 @@ export function licenseGet(forceRefresh: boolean): LicenseStatus {
 /** ライセンスキー削除。 */
 export function licenseClear(): LicenseStatus {
   return removeLicenseKey();
-}
-
-/**
- * 開発用リセット（(dev)メニュー専用。版指定デプロイ前に(dev)一括削除の対象）:
- * 当月使用量カウンタと reviewPromptShown を削除する。
- * E2Eで無料枠（月3枚）を使い切っても再検証できるようにするための機能で、
- * 本番UIからは到達できない（FR-9の「プロパティ消去による無料枠リセットは許容」の割り切りと同水準）。
- */
-export function devResetUsageAndReviewFlag(): string {
-  clearUsageForDev();
-  PropertiesService.getUserProperties().deleteProperty(REVIEW_PROMPT_PROP);
-  return '当月使用量カウンタと reviewPromptShown をリセットしました（開発用）';
 }

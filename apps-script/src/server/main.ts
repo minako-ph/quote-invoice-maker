@@ -5,7 +5,6 @@
 
 import {
   convertActiveQuote,
-  devResetUsageAndReviewFlag,
   exportActiveToPdf,
   licenseClear,
   licenseGet,
@@ -21,26 +20,14 @@ import {
   type SidebarInit,
   type UsageInfo,
 } from './sidebarApi';
-import { probeDrive, probeExportPdf, probeExportPdfFallback1, probeSheetsApiWrite } from './spike';
 import type { LicenseStatus } from './license';
 import type { IssuerProfile, ProfileValidation } from './profile';
 
-/**
- * アドオンメニュー（エディタアドオンのonOpen）。
- * (dev) 項目はV-1/V-2スパイク用の一時メニュー——standaloneエディタ実行では
- * SpreadsheetApp.getActiveSpreadsheet() が null になり本番フロー（_帳票描画→export）に
- * 入れないため、テストシート上のメニューから実行する。**スパイク成立後に削除する**（decisions.md TODO）。
- */
+/** アドオンメニュー（エディタアドオンのonOpen）。 */
 export function onOpen(): void {
   SpreadsheetApp.getUi()
     .createAddonMenu()
     .addItem('サイドバーを開く', 'showSidebar')
-    .addSeparator()
-    .addItem('(dev) V-1スパイク', 'devRunExportPdfProbe')
-    .addItem('(dev) V-1フォールバック(1)スパイク', 'devRunExportPdfFallback1')
-    .addItem('(dev) V-1 probe⑤ Sheets REST書込', 'devRunSheetsApiWrite')
-    .addItem('(dev) V-2スパイク', 'devRunDriveProbe')
-    .addItem('(dev) 使用量リセット', 'devResetUsage')
     .addToUi();
 }
 
@@ -107,43 +94,5 @@ export function createSample(): { sheetName: string } {
   return newSample();
 }
 
-// ---- V-1/V-2 スパイク（§12-3）----
-// devRun* はテストシートのアドオンメニューから実行し、結果全文を alert で表示する
-// （改行そのまま。スプレッドシートのUIコンテキストで動くため getActiveSpreadsheet が有効）。
-// exportPdfProbe/driveProbe はエディタ実行用に残す（V-2はエディタ実行で成立済み）。
-
-export function devRunExportPdfProbe(): void {
-  SpreadsheetApp.getUi().alert(probeExportPdf());
-}
-
-export function devRunExportPdfFallback1(): void {
-  SpreadsheetApp.getUi().alert(probeExportPdfFallback1());
-}
-
-export function devRunSheetsApiWrite(): void {
-  SpreadsheetApp.getUi().alert(probeSheetsApiWrite());
-}
-
-export function devRunDriveProbe(): void {
-  SpreadsheetApp.getUi().alert(probeDrive());
-}
-
-export function devResetUsage(): void {
-  SpreadsheetApp.getUi().alert(devResetUsageAndReviewFlag());
-}
-
-export function exportPdfProbe(): string {
-  return probeExportPdf();
-}
-
-export function exportPdfFallback1Probe(): string {
-  return probeExportPdfFallback1();
-}
-
-export function sheetsApiWriteProbe(): string {
-  return probeSheetsApiWrite();
-}
-
-export function driveProbe(): string {
-  return probeDrive();
-}
+// V-1/V-2 スパイク・(dev)メニューは版指定デプロイ前クリーンアップで削除済み
+// （2026-07-25。経緯と実測は docs/decisions.md・docs/setup/spike-v1-v2.md 参照）。
