@@ -1,4 +1,4 @@
-# backend/Dockerfile は workspace ルートをコンテキストにビルドする。
+# ルートの Dockerfile（backend用）は workspace ルートをコンテキストにビルドする。
 # 巨大・秘匿・再生成物をコンテキストから除外する。
 **/node_modules
 **/dist

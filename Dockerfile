@@ -1,9 +1,12 @@
 # backend (Cloud Run) イメージ。
 #
-# 重要: **workspace ルートをビルドコンテキスト**にしてビルドすること。
-#   docker build -f backend/Dockerfile -t quote-invoice-maker-backend .
+# 配置: **リポジトリルート**（柱3 1971e33 と同じ理由）。`gcloud run deploy --source .` は
+# ルートの Dockerfile のみを検出し、backend/ 配下だと Buildpacks フォールバックで
+# ERR_PNPM_NO_SCRIPT_OR_SERVER になる。本 Dockerfile は workspace ルートをビルド
+# コンテキストとする前提の作りのため、ルート配置が正解。
+#   docker build -t quote-invoice-maker-backend .
 # workspace のルートの pnpm-lock.yaml / pnpm-workspace.yaml を含めて依存を解決する。
-# node_modules / dist / .env はコンテキストから除外する（.dockerignore 参照）。
+# node_modules / dist / .env はコンテキストから除外する（ルートの .dockerignore 参照）。
 
 FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm

@@ -64,8 +64,8 @@ openssl pkey -in license-signing-key.pem -pubout
 ## Cloud Run デプロイ（人間タスク。引継書§7）
 
 ```bash
-# ビルドは workspace ルートをコンテキストにする
-docker build -f backend/Dockerfile -t quote-invoice-maker-backend .
+# Dockerfile はリポジトリルートに配置（gcloud run deploy --source がルートのみ検出するため）
+docker build -t quote-invoice-maker-backend .
 
 # region=asia-northeast1 / max-instances=1（コスト上限ガード）/ min-instances=0
 gcloud run deploy quote-invoice-maker-backend \
