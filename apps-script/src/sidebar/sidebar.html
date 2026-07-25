@@ -122,6 +122,7 @@
   </div>
   <div id="licensePro" style="display:none">
     <button onclick="clearLicense()">ライセンスキーを削除する</button>
+    <p class="muted">解約は<a href="https://billing.stripe.com/p/login/4gM14n4eE0XFgoIcSmcwg00" target="_blank" rel="noopener">Stripeカスタマーポータル</a>から。解約後も当該課金期間の満了までPro機能を利用できます。</p>
   </div>
 
   <h2>ヘルプ</h2>
@@ -153,8 +154,8 @@
 <script>
   // 購入導線・再表示ページのURL。公開作業（人間タスク）で確定後に差し替える。
   // 空の間はアップグレード導線を「準備中」にする（柱3 thanks.html と同じプレースホルダ運用）。
-  var CHECKOUT_URL = '';
-  var RECOVER_URL = '';
+  var CHECKOUT_URL = 'https://buy.stripe.com/eVq28reTifSzb4odWqcwg01';
+  var RECOVER_URL = 'https://pelmoalabs.com/quote-invoice-maker/license-recover.html';
   // F-6: Marketplace掲載URL（レビュー依頼用）。公開後に人間が差替。空の間は何も表示しない。
   var REVIEW_URL = '';
 

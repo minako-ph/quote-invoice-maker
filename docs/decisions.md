@@ -1,5 +1,6 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-25 BACKEND_URL確定に伴う差替一式: urlFetchWhitelistに https://quote-invoice-maker-backend-hiiu6eooua-an.a.run.app/ を追加（docs.google.com維持・oauthScopes4点不変）、web/thanks・license-recoverのBACKEND_URLを実URLへ（「準備中」フォールバック構造は維持）、sidebar CHECKOUT_URL=Stripe Payment Link／RECOVER_URL=pelmoalabs.com/quote-invoice-maker/license-recover.html（REVIEW_URLは公開後確定まで空）、解約ポータルURL（billing.stripe.com）をtokushoho・LP FAQ・サイドバーライセンス節に設定
 - 2026-07-25 Dockerfileをリポジトリルートへ移動（柱3 1971e33 と同理由: `gcloud run deploy --source` はルートのDockerfileのみ検出し、backend/配下だとBuildpacksフォールバックで ERR_PNPM_NO_SCRIPT_OR_SERVER）。本Dockerfileはworkspaceルートコンテキスト前提の作りのためルートが正解。ビルド例は `docker build -t quote-invoice-maker-backend .`（-f不要）へ更新・backend/READMEにも反映
 - 2026-07-25 版指定デプロイ前クリーンアップ: (dev)メニュー・probe群（spike.ts・devRun系・devResetUsage・エディタ用probe）を全削除しENTRY_POINTS/footer整合（既存TODO消化）。urlFetchWhitelistを https://docs.google.com/ のみに縮小（www.googleapis.com はprobe④専用だった）。scratch堅牢化=batchUpdate失敗時（sheetId=0消失等）はスクラッチID破棄→再作成→1回だけリトライ・それでも失敗なら原因つきエラー。demo-video-script.mdをシーン0〜4構成（スコープ実測区分対応表・権限リセット手順・ダミープロファイル注意・日英字幕）へ全面更新
 - 2026-07-25 ブランド確認の実測指摘2件対応（web/index.htmlのみ・柱3初回と同一パターン）: ①h1をOAuth同意画面のアプリ名と完全一致「見積書・請求書メーカー」（プレーン表記）へ入替・キャッチコピーはh1直下のpへ降格・目的説明文の文頭かぎ括弧を除去（機械照合対策） ②meta descriptionをアプリ名主語の目的説明文へ差し替え。柱3がh1+title両方一致の構成で通過した実績に完全整合。CR-4禁止表現なし・相対パス維持
