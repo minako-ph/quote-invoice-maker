@@ -6,7 +6,8 @@
 <!-- 審査プリフライト: OAuthブランド確認の自動チェック対策で<title>はアプリ名のみ（柱3実指摘の横展開）。
      SEOサブタイトル「for Google Sheets — 源泉税計算・インボイス対応」は審査通過後に復帰する。 -->
 <title>見積書・請求書メーカー</title>
-<meta name="description" content="見積書から請求書へワンクリック変換。源泉所得税の自動計算、適格請求書の記載要件に沿った消費税計算（端数処理は選択式）、電子帳簿保存法の実務に沿ったファイル名でのPDF保存まで、スプレッドシートの中で完結。無料で月3枚まで。">
+<!-- ブランド確認対策: meta descriptionもアプリ名主語の目的説明文（機械照合対策） -->
+<meta name="description" content="見積書・請求書メーカーは、Googleスプレッドシート上で見積書・請求書を作成し、消費税・源泉所得税を自動計算してPDF生成からGoogleドライブ保存まで行うGoogle Sheets用エディタアドオンです。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -94,12 +95,19 @@ a:hover{text-decoration:underline}
 }
 .hero-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
 .hero h1{
-  font-family:var(--mincho);font-weight:600;
-  font-size:clamp(1.9rem, 4.3vw, 3.05rem);
-  line-height:1.42;letter-spacing:.02em;
-  margin-bottom:24px;
+  font-family:var(--mincho);font-weight:700;
+  font-size:clamp(1.75rem, 3.6vw, 2.6rem);
+  line-height:1.3;letter-spacing:.06em;
+  margin-bottom:14px;
 }
-.hero h1 em{font-style:normal;color:var(--green);}
+.hero-catch{
+  font-family:var(--mincho);font-weight:600;
+  font-size:clamp(1.2rem, 2.4vw, 1.65rem);
+  line-height:1.55;letter-spacing:.02em;
+  color:var(--ink);
+  margin-bottom:22px;
+}
+.hero-catch em{font-style:normal;color:var(--green);}
 .hero-desc{font-size:.92rem;color:var(--ink-soft);max-width:36em;margin-bottom:16px}
 .hero-lead{font-size:1.02rem;color:var(--ink-soft);max-width:34em;margin-bottom:34px}
 .cta-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:14px}
@@ -399,10 +407,12 @@ section{padding:88px 0}
     <div class="wrap">
       <div class="hero-copy">
         <span class="hero-eyebrow">Google Sheets アドオン</span>
-        <h1 id="hero-h">毎月の見積書・請求書を、<br><em>スプレッドシートから出ずに。</em></h1>
-        <!-- 審査プリフライト: アプリ名と目的の説明文（h1直下・柱3実指摘の横展開） -->
+        <!-- ブランド確認対策: h1はOAuth同意画面のアプリ名と完全一致のプレーン表記（柱3実指摘と同一パターン） -->
+        <h1 id="hero-h">見積書・請求書メーカー</h1>
+        <p class="hero-catch">毎月の見積書・請求書を、<br><em>スプレッドシートから出ずに。</em></p>
+        <!-- 審査プリフライト: アプリ名と目的の説明文（かぎ括弧なしのプレーン表記・機械照合対策） -->
         <p class="hero-desc">
-          <strong>「見積書・請求書メーカー」</strong>は、Google スプレッドシート上で見積書・請求書を作成し、
+          <strong>見積書・請求書メーカー</strong>は、Google スプレッドシート上で見積書・請求書を作成し、
           消費税・源泉所得税を自動計算して、PDFの生成から Google Drive への保存までを一気通貫で行う
           Google Sheets 用エディタアドオンです。
         </p>
